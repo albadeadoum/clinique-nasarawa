@@ -28,4 +28,62 @@ class ExamenComplementaire
 
     #[ORM\Column(type: 'datetime_immutable', nullable: true)]
     private ?\DateTimeImmutable $dateExamen = null;
-}
+
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getHospitalisation(): Hospitalisation
+    {
+        return $this->hospitalisation;
+    }
+
+    public function setHospitalisation(Hospitalisation $hospitalisation): self
+    {
+        $this->hospitalisation = $hospitalisation;
+
+        if (!$hospitalisation->getExamensComplementaires()->contains($this)) {
+            $hospitalisation->addExamenComplementaire($this);
+        }
+
+        return $this;
+    }
+
+    public function getType(): TypeExamenComplementaire
+    {
+        return $this->type;
+    }
+
+    public function setType(TypeExamenComplementaire $type): self
+    {
+        $this->type = $type;
+
+        return $this;
+    }
+
+    public function getResultat(): ?string
+    {
+        return $this->resultat;
+    }
+
+    public function setResultat(?string $resultat): self
+    {
+        $this->resultat = $resultat;
+
+        return $this;
+    }
+
+    public function getDateExamen(): ?\DateTimeImmutable
+    {
+        return $this->dateExamen;
+    }
+
+    public function setDateExamen(?\DateTimeImmutable $dateExamen): self
+    {
+        $this->dateExamen = $dateExamen;
+
+        return $this;
+    }
+ }

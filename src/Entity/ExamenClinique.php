@@ -51,4 +51,158 @@ class ExamenClinique
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $notes = null;
+
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getHospitalisation(): Hospitalisation
+    {
+        return $this->hospitalisation;
+    }
+
+    public function setHospitalisation(Hospitalisation $hospitalisation): self
+    {
+        $this->hospitalisation = $hospitalisation;
+
+        if ($hospitalisation->getExamenClinique() !== $this) {
+            $hospitalisation->setExamenClinique($this);
+        }
+
+        return $this;
+    }
+
+    public function getTensionArterielle(): ?string
+    {
+        return $this->tensionArterielle;
+    }
+
+    public function setTensionArterielle(?string $tension): self
+    {
+        $this->tensionArterielle = $tension;
+
+        return $this;
+    }
+
+    public function getPouls(): ?int
+    {
+        return $this->pouls;
+    }
+
+    public function setPouls(?int $pouls): self
+    {
+        $this->pouls = $pouls;
+
+        return $this;
+    }
+
+    public function getTemperature(): ?float
+    {
+        return $this->temperature;
+    }
+
+    public function setTemperature(?float $temperature): self
+    {
+        $this->temperature = $temperature;
+
+        return $this;
+    }
+
+    public function getSaturationOxygene(): ?float
+    {
+        return $this->saturationOxygene;
+    }
+
+    public function setSaturationOxygene(?float $sat): self
+    {
+        $this->saturationOxygene = $sat;
+
+        return $this;
+    }
+
+    public function getFrequenceRespiratoire(): ?int
+    {
+        return $this->frequenceRespiratoire;
+    }
+
+    public function setFrequenceRespiratoire(?int $freq): self
+    {
+        $this->frequenceRespiratoire = $freq;
+
+        return $this;
+    }
+
+    public function getPoids(): ?float
+    {
+        return $this->poids;
+    }
+
+    public function setPoids(?float $poids): self
+    {
+        $this->poids = $poids;
+
+        return $this;
+    }
+
+    public function getTaille(): ?float
+    {
+        return $this->taille;
+    }
+
+    public function setTaille(?float $taille): self
+    {
+        $this->taille = $taille;
+
+        return $this;
+    }
+
+    public function getImc(): ?float
+    {
+        return $this->imc;
+    }
+
+    public function setImc(?float $imc): self
+    {
+        $this->imc = $imc;
+
+        return $this;
+    }
+
+    public function isDeshydratation(): bool
+    {
+        return $this->deshydratation;
+    }
+
+    public function setDeshydratation(bool $val): self
+    {
+        $this->deshydratation = $val;
+
+        return $this;
+    }
+
+    public function isOedeme(): bool
+    {
+        return $this->oedeme;
+    }
+
+    public function setOedeme(bool $val): self
+    {
+        $this->oedeme = $val;
+
+        return $this;
+    }
+
+    public function getNotes(): ?string
+    {
+        return $this->notes;
+    }
+
+    public function setNotes(?string $notes): self
+    {
+        $this->notes = $notes;
+
+        return $this;
+    }
 }
