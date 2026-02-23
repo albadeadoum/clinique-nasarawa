@@ -2,16 +2,17 @@
 
 namespace App\Entity;
 
-
+use App\Enum\StatutUtilisateur;
 use App\Repository\UtilisateurRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\ORM\Mapping as ORM;
-
+use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 #[ORM\Entity(repositoryClass: UtilisateurRepository::class)]
 #[ORM\HasLifecycleCallbacks]
-class Utilisateur
+class Utilisateur implements UserInterface, PasswordAuthenticatedUserInterface
 {
     use TimestampableTrait;
 
@@ -29,18 +30,18 @@ class Utilisateur
     #[ORM\Column(length: 180, unique: true)]
     private string $username;
 
-    #[ORM\Column]
-    private string $hashPassword;
+    #[ORM\Column(length: 255)]
+    private ?string $password = null;
 
-    #[ORM\Column]
-    private bool $statut = true;
+    #[ORM\Column(enumType: StatutUtilisateur::class)]
+    private StatutUtilisateur $statut = StatutUtilisateur::ACTIF;
 
     #[ORM\Column(type: 'json')]
     private array $roles = [];
 
     #[ORM\ManyToOne(inversedBy: 'utilisateurs')]
-    #[ORM\JoinColumn(nullable: false)]
-    private ServiceMedical $serviceMedical;
+    #[ORM\JoinColumn(nullable: true, onDelete: 'SET NULL')]
+private ?ServiceMedical $serviceMedical = null;  
 
     #[ORM\OneToMany(mappedBy: 'medecin', targetEntity: RendezVous::class)]
     private Collection $rendezVous;
@@ -154,9 +155,41 @@ class Utilisateur
 
     public function eraseCredentials(): void {}
 
-    public function isActif(): bool { return $this->statut; }
-    public function setStatut(bool $statut): self { $this->statut = $statut; return $this; }
+    public function getStatut(): StatutUtilisateur
+    {
+        return $this->statut;
+    }
 
-    public function getServiceMedical(): ServiceMedical { return $this->serviceMedical; }
-    public function setServiceMedical(ServiceMedical $serviceMedical): self { $this->serviceMedical = $serviceMedical; return $this; }
+    public function setStatut(StatutUtilisateur $statut): self
+    {
+        $this->statut = $statut;
+        return $this;
+    }
+
+   public function getServiceMedical(): ?ServiceMedical
+    {
+        return $this->serviceMedical;
+    }
+
+    public function setServiceMedical(?ServiceMedical $serviceMedical): self
+    {
+        $this->serviceMedical = $serviceMedical;
+        return $this;
+    }
+
+    public function getPassword(): string
+    {
+        return (string) $this->password;
+    }
+
+    public function setPassword(string $password): self
+    {
+        $this->password = $password;
+        return $this;
+    }
+
+    public function getUserIdentifier(): string
+    {
+        return (string) $this->username;
+    }
 }

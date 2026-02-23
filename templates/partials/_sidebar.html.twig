@@ -58,19 +58,22 @@
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link menu-link" href="#" role="button">
+                    <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_consultation_index' ? 'active' : '' }}"
+                    href="{{ path('app_consultation_index') }}">
                         <i class="ri-health-book-line"></i>
                         <span data-key="t-ecommerce">Consultations</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link menu-link" href="#" role="button">
+                    <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_rendez_vous_index' ? 'active' : '' }}"
+                    href="{{ path('app_rendez_vous_index') }}">
                         <i class="ri-calendar-event-line"></i> 
                         <span data-key="t-ecommerce">Rendez-vous</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link menu-link" href="#" role="button">
+                    <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_facture_index' ? 'active' : '' }}"
+                    href="{{ path('app_facture_index') }}">
                         <i class="ri-cash-line"></i> 
                         <span data-key="t-ecommerce">Factures</span>
                     </a>
@@ -92,13 +95,15 @@
              <ul class="navbar-nav" id="navbar-nav">
                 <li class="menu-title"><span data-key="t-menu">Autres</span></li>
                 <li class="nav-item">
-                         <a class="nav-link menu-link" href="#sidebarDashboards" role="button">
+                          <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_utilisateur_index' ? 'active' : '' }}"
+                    href="{{ path('app_utilisateur_index') }}">
                         <i class="ri-user-line"></i> 
                         <span data-key="t-dashboards">Utilisateurs</span>
                     </a>
                 </li>
                 <li class="nav-item">
-                         <a class="nav-link menu-link" href="#sidebarDashboards" role="button">
+                        <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_utilisateur_param' ? 'active' : '' }}"
+                    href="{{ path('app_utilisateur_param') }}">
                         <i class="ri-settings-5-line"></i> 
                         <span data-key="t-dashboards">Paramètres</span>
                     </a>

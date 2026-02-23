@@ -9,19 +9,73 @@ use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\PasswordHasher\Hasher\UserPasswordHasherInterface;
 use Symfony\Component\Routing\Attribute\Route;
 
 #[Route('/utilisateur')]
 final class UtilisateurController extends AbstractController
 {
-    #[Route(name: 'app_utilisateur_index', methods: ['GET'])]
-    public function index(UtilisateurRepository $utilisateurRepository): Response
-    {
+   #[Route(name: 'app_utilisateur_index', methods: ['GET', 'POST'])]
+    public function index(
+        Request $request,
+        UtilisateurRepository $utilisateurRepository,
+        EntityManagerInterface $em,
+        UserPasswordHasherInterface $passwordHasher
+    ): Response {
+        $utilisateur = new Utilisateur();
+
+        $form = $this->createForm(UtilisateurType::class, $utilisateur, [
+            'is_new' => true,
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $plainPassword = (string) $form->get('plainPassword')->getData();
+
+            if ($plainPassword !== '') {
+               $utilisateur->setPassword(
+                    $passwordHasher->hashPassword($utilisateur, $plainPassword)
+                );
+            }
+
+            // Sécurité: garantir au moins ROLE_USER (si tu l’utilises)
+            $roles = $utilisateur->getRoles();
+            if (!in_array('ROLE_USER', $roles, true)) {
+                $roles[] = 'ROLE_USER';
+                $utilisateur->setRoles($roles);
+            }
+
+            $em->persist($utilisateur);
+            $em->flush();
+
+            return $this->redirectToRoute('app_utilisateur_index');
+        }
+
         return $this->render('utilisateur/index.html.twig', [
             'utilisateurs' => $utilisateurRepository->findAll(),
+            'form' => $form->createView(),
         ]);
     }
 
+    #[Route('/param', name: 'app_utilisateur_param', methods: ['GET', 'POST'])]
+    public function param(Request $request, EntityManagerInterface $entityManager): Response
+    {
+        $utilisateur = new Utilisateur();
+        $form = $this->createForm(UtilisateurType::class, $utilisateur);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $entityManager->persist($utilisateur);
+            $entityManager->flush();
+
+            return $this->redirectToRoute('app_utilisateur_index', [], Response::HTTP_SEE_OTHER);
+        }
+
+        return $this->render('utilisateur/param.html.twig', [
+            //'utilisateur' => $utilisateur,
+            //'form' => $form,
+        ]);
+    }
     #[Route('/new', name: 'app_utilisateur_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
     {

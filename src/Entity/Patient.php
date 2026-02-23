@@ -94,14 +94,14 @@ class Patient
         }
     }
 
-    #[ORM\Column(length: 2)]
+    #[ORM\Column(length: 10)]
     #[Assert\Choice(choices: ['M', 'F'])]
     private ?string $sexe = null;
 
     #[ORM\Column(length: 255, nullable: true)]
     private ?string $adresse = null;
 
-    #[ORM\Column(length: 3, nullable: true)]
+    #[ORM\Column(length: 10, nullable: true)]
     #[Assert\Choice(choices: ['A+','A-','B+','B-','AB+','AB-','O+','O-'])]
     private ?string $groupeSanguin = null;
 

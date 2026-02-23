@@ -14,31 +14,26 @@ use Symfony\Component\Routing\Attribute\Route;
 #[Route('/rendez/vous')]
 final class RendezVousController extends AbstractController
 {
-    #[Route(name: 'app_rendez_vous_index', methods: ['GET'])]
-    public function index(RendezVousRepository $rendezVousRepository): Response
-    {
-        return $this->render('rendez_vous/index.html.twig', [
-            'rendez_vouses' => $rendezVousRepository->findAll(),
-        ]);
-    }
-
-    #[Route('/new', name: 'app_rendez_vous_new', methods: ['GET', 'POST'])]
-    public function new(Request $request, EntityManagerInterface $entityManager): Response
-    {
-        $rendezVou = new RendezVous();
-        $form = $this->createForm(RendezVousType::class, $rendezVou);
+   #[Route(name: 'app_rendez_vous_index', methods: ['GET', 'POST'])]
+    public function index(
+        Request $request,
+        RendezVousRepository $rendezVousRepository,
+        EntityManagerInterface $em
+    ): Response {
+        $rv = new RendezVous();
+        $form = $this->createForm(RendezVousType::class, $rv);
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
-            $entityManager->persist($rendezVou);
-            $entityManager->flush();
+            $em->persist($rv);
+            $em->flush();
 
-            return $this->redirectToRoute('app_rendez_vous_index', [], Response::HTTP_SEE_OTHER);
+            return $this->redirectToRoute('app_rendez_vous_index');
         }
 
-        return $this->render('rendez_vous/new.html.twig', [
-            'rendez_vou' => $rendezVou,
-            'form' => $form,
+        return $this->render('rendez_vous/index.html.twig', [
+            'rendezVous' => $rendezVousRepository->findAll(),   // ✅ la variable manquante
+            'form' => $form->createView(),
         ]);
     }
 

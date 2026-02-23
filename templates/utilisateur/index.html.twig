@@ -1,49 +1,166 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Utilisateur index{% endblock %}
+{% block title %}Utilisateurs{% endblock %}
 
 {% block body %}
-    <h1>Utilisateur index</h1>
+<div class="row">
+  <div class="col-12">
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
+    <div class="card card-primary">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Liste des Utilisateurs</h3>
+
+        <button type="button"
+                class="btn btn-success"
+                data-bs-toggle="modal"
+                data-bs-target="#addUtilisateurModal">
+          <i class="fa fa-plus"></i> Nouvel utilisateur
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered align-middle text-center mb-0">
+            <thead class="table-light">
+              <tr>
                 <th>Nom</th>
-                <th>Prenom</th>
+                <th>Prénom</th>
                 <th>Username</th>
-                <th>HashPassword</th>
                 <th>Statut</th>
-                <th>Roles</th>
-                <th>CreatedAt</th>
-                <th>ModifiedAt</th>
-                <th>actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for utilisateur in utilisateurs %}
-            <tr>
-                <td>{{ utilisateur.id }}</td>
-                <td>{{ utilisateur.nom }}</td>
-                <td>{{ utilisateur.prenom }}</td>
-                <td>{{ utilisateur.username }}</td>
-                <td>{{ utilisateur.hashPassword }}</td>
-                <td>{{ utilisateur.statut ? 'Yes' : 'No' }}</td>
-                <td>{{ utilisateur.roles ? utilisateur.roles|json_encode : '' }}</td>
-                <td>{{ utilisateur.createdAt ? utilisateur.createdAt|date('Y-m-d H:i:s') : '' }}</td>
-                <td>{{ utilisateur.modifiedAt ? utilisateur.modifiedAt|date('Y-m-d H:i:s') : '' }}</td>
-                <td>
-                    <a href="{{ path('app_utilisateur_show', {'id': utilisateur.id}) }}">show</a>
-                    <a href="{{ path('app_utilisateur_edit', {'id': utilisateur.id}) }}">edit</a>
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="10">no records found</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                <th>Rôles</th>
+                <th>Service</th>
+                <th>Créé le</th>
+                <th style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
 
-    <a href="{{ path('app_utilisateur_new') }}">Create new</a>
+            <tbody>
+            {% for u in utilisateurs %}
+              <tr>
+                <td>{{ u.nom }}</td>
+                <td>{{ u.prenom }}</td>
+                <td>{{ u.username }}</td>
+
+                <td>
+                  {# Enum (recommandé) : u.statut.label() / u.statut.value
+                     Bool (ancien) : u.actif ? 'Actif' : 'Inactif'
+                  #}
+                  {% if u.statut is defined and u.statut %}
+                    {# si Enum #}
+                    {% if u.statut.label is defined %}
+                      <span class="badge bg-success-subtle text-success border border-success-subtle">
+                        {{ u.statut.label() }}
+                      </span>
+                    {% else %}
+                      <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle">
+                        {{ u.statut }}
+                      </span>
+                    {% endif %}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+
+                <td class="text-start">
+                  {% set roles = u.roles ?? [] %}
+                  {% if roles|length > 0 %}
+                    {# Affichage compact des rôles #}
+                    {% for r in roles %}
+                      <span class="badge bg-light text-dark border me-1 mb-1">{{ r }}</span>
+                    {% endfor %}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if u.serviceMedical %}
+                    {# adapte libelle/nom selon ton entité #}
+                    {{ u.serviceMedical.libelle ?? u.serviceMedical.nom ?? u.serviceMedical.id }}
+                  {% else %}
+                    <span class="text-muted">-</span>
+                  {% endif %}
+                </td>
+
+                <td>{{ u.createdAt ? u.createdAt|date('Y-m-d H:i') : '-' }}</td>
+
+                <td>
+                  <div class="d-flex gap-2 justify-content-center">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ path('app_utilisateur_show', {'id': u.id}) }}">
+                      Voir
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary js-edit-utilisateur"
+                            data-url="{{ path('app_utilisateur_edit', {'id': u.id}) }}">
+                      Modifier
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8" class="text-muted">Aucun utilisateur enregistré.</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# =========================
+   MODAL AJOUT UTILISATEUR
+========================= #}
+<div class="modal fade" id="addUtilisateurModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Nouvel Utilisateur</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        {{ form_start(form, {'attr': {'id': 'UtilisateurForm'}}) }}
+
+        <div class="row g-3">
+          <div class="col-md-6">{{ form_row(form.nom) }}</div>
+          <div class="col-md-6">{{ form_row(form.prenom) }}</div>
+
+          <div class="col-md-6">{{ form_row(form.username) }}</div>
+          <div class="col-md-6">
+            {# si tu as implémenté plainPassword (recommandé) #}
+            {% if form.plainPassword is defined %}
+              {{ form_row(form.plainPassword) }}
+            {% else %}
+              {{ form_row(form.hashPassword) }}
+            {% endif %}
+          </div>
+
+          <div class="col-md-6">{{ form_row(form.statut) }}</div>
+
+          <div class="col-md-6">
+            {# roles multiple/expanded => occupe souvent plus d’espace #}
+            {{ form_row(form.roles) }}
+          </div>
+
+          <div class="col-md-12">{{ form_row(form.serviceMedical) }}</div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-success">Enregistrer</button>
+        </div>
+
+        {{ form_end(form) }}
+      </div>
+
+    </div>
+  </div>
+</div>
 {% endblock %}

@@ -1,43 +1,141 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}RendezVous index{% endblock %}
+{% block title %}Rendez-vous{% endblock %}
 
 {% block body %}
-    <h1>RendezVous index</h1>
+<div class="row">
+  <div class="col-12">
 
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Id</th>
-                <th>DateHeure</th>
+    <div class="card card-primary">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Liste des Rendez-vous</h3>
+
+        <button type="button"
+                class="btn btn-success"
+                data-bs-toggle="modal"
+                data-bs-target="#addRendezVousModal">
+          <i class="fa fa-plus"></i> Nouveau rendez-vous
+        </button>
+      </div>
+
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered align-middle text-center mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Date / Heure</th>
                 <th>Statut</th>
                 <th>Motif</th>
-                <th>CreatedAt</th>
-                <th>ModifiedAt</th>
-                <th>actions</th>
-            </tr>
-        </thead>
-        <tbody>
-        {% for rendez_vou in rendez_vouses %}
-            <tr>
-                <td>{{ rendez_vou.id }}</td>
-                <td>{{ rendez_vou.dateHeure ? rendez_vou.dateHeure|date('Y-m-d H:i:s') : '' }}</td>
-                <td>{{ rendez_vou.statut }}</td>
-                <td>{{ rendez_vou.motif }}</td>
-                <td>{{ rendez_vou.createdAt ? rendez_vou.createdAt|date('Y-m-d H:i:s') : '' }}</td>
-                <td>{{ rendez_vou.modifiedAt ? rendez_vou.modifiedAt|date('Y-m-d H:i:s') : '' }}</td>
-                <td>
-                    <a href="{{ path('app_rendez_vous_show', {'id': rendez_vou.id}) }}">show</a>
-                    <a href="{{ path('app_rendez_vous_edit', {'id': rendez_vou.id}) }}">edit</a>
-                </td>
-            </tr>
-        {% else %}
-            <tr>
-                <td colspan="7">no records found</td>
-            </tr>
-        {% endfor %}
-        </tbody>
-    </table>
+                <th>Patient</th>
+                <th>Médecin</th>
+                <th>Consultation</th>
+                <th>Créé le</th>
+                <th style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
 
-    <a href="{{ path('app_rendez_vous_new') }}">Create new</a>
+            <tbody>
+            {% for rv in rendezVous %}
+              <tr>
+                <td>{{ rv.dateHeure ? rv.dateHeure|date('Y-m-d H:i') : '-' }}</td>
+                <td>{{ rv.statut ?? '-' }}</td>
+
+                <td class="text-start">
+                  {{ rv.motif ? rv.motif|u.truncate(60, '…', false) : '-' }}
+                </td>
+
+                {# ⚠️ Affichage patient / médecin: si tu n'as pas nom/prenom, fallback sur id #}
+                <td>
+                  {% if rv.patient %}
+                    {{ rv.patient.nom }} {{ rv.patient.prenom ?? '' }} ({{ rv.patient.id }})
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if rv.medecin %}
+                    {{ rv.medecin.nomComplet ?? rv.medecin.id }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>
+                  {% if rv.consultation %}
+                    {{ rv.consultation.id }}
+                  {% else %}
+                    -
+                  {% endif %}
+                </td>
+
+                <td>{{ rv.createdAt ? rv.createdAt|date('Y-m-d H:i') : '-' }}</td>
+
+                <td>
+                  <div class="d-flex gap-2 justify-content-center">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ path('app_rendez_vous_show', {'id': rv.id}) }}">
+                      Voir
+                    </a>
+
+                    <button type="button"
+                            class="btn btn-sm btn-outline-primary js-edit-rendezvous"
+                            data-url="{{ path('app_rendez_vous_edit', {'id': rv.id}) }}">
+                      Modifier
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="8" class="text-muted">Aucun rendez-vous enregistré.</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# =========================
+   MODAL AJOUT RENDEZ-VOUS
+========================= #}
+<div class="modal fade" id="addRendezVousModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">Nouveau Rendez-vous</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body">
+        {{ form_start(form, {'attr': {'id': 'RendezVousForm'}}) }}
+
+        <div class="row g-3">
+          <div class="col-md-6">{{ form_row(form.dateHeure) }}</div>
+          <div class="col-md-6">{{ form_row(form.statut) }}</div>
+
+          <div class="col-md-12">{{ form_row(form.motif) }}</div>
+
+          <div class="col-md-6">{{ form_row(form.patient) }}</div>
+          <div class="col-md-6">{{ form_row(form.medecin) }}</div>
+
+          <div class="col-md-12">{{ form_row(form.consultation) }}</div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-4">
+          <button class="btn btn-success">Enregistrer</button>
+        </div>
+
+        {{ form_end(form) }}
+      </div>
+
+    </div>
+  </div>
+</div>
 {% endblock %}
