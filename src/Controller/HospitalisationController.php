@@ -2,17 +2,120 @@
 
 namespace App\Controller;
 
+use App\Entity\Hospitalisation;
+use App\Form\HospitalisationType;
+use App\Repository\HospitalisationRepository;
+use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
+use Sensio\Bundle\FrameworkExtraBundle\Configuration\IsGranted;
 
+#[IsGranted('ROLE_USER')]
+#[Route('/hospitalisation')]
 final class HospitalisationController extends AbstractController
 {
-    #[Route('/hospitalisation', name: 'app_hospitalisation')]
-    public function index(): Response
-    {
+    #[Route(name: 'app_hospitalisation_index', methods: ['GET','POST'])]
+    public function index(
+        Request $request,
+        HospitalisationRepository $repository,
+        EntityManagerInterface $em
+    ): Response {
+
+        $hospitalisation = new Hospitalisation();
+        $form = $this->createForm(HospitalisationType::class, $hospitalisation);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->persist($hospitalisation);
+            $em->flush();
+
+            return $this->redirectToRoute('app_hospitalisation_index');
+        }
+
         return $this->render('hospitalisation/index.html.twig', [
-            'controller_name' => 'HospitalisationController',
+            'hospitalisations' => $repository->findBy([], ['id' => 'DESC']),
+            'form' => $form->createView(), // ✅ IMPORTANT
         ]);
+    }
+
+
+    #[Route('/{id}', name: 'app_hospitalisation_show', methods: ['GET'])]
+    public function show(Hospitalisation $hospitalisation): Response
+    {
+        return $this->render('hospitalisation/show.html.twig', [
+            'hospitalisation' => $hospitalisation,
+        ]);
+    }
+
+
+    #[IsGranted('ROLE_ADMIN')]
+    #[Route('/{id}/edit', name: 'app_hospitalisation_edit', methods: ['GET','POST'])]
+    public function edit(
+        Request $request,
+        Hospitalisation $hospitalisation,
+        EntityManagerInterface $em
+    ): Response {
+
+        $form = $this->createForm(HospitalisationType::class, $hospitalisation);
+        $form->handleRequest($request);
+
+        // === GET AJAX → Charger le formulaire dans le modal
+        if ($request->isXmlHttpRequest() && $request->isMethod('GET')) {
+            return new JsonResponse([
+                'form' => $this->renderView('hospitalisation/_form.html.twig', [
+                    'form' => $form->createView(),
+                    'hospitalisation' => $hospitalisation,
+                ])
+            ]);
+        }
+
+        // === POST AJAX → Soumission du formulaire
+        if ($request->isXmlHttpRequest() && $request->isMethod('POST')) {
+
+            if ($form->isSubmitted() && $form->isValid()) {
+
+                $em->flush();
+
+                return new JsonResponse(['success' => true]);
+            }
+
+            // Récupérer erreurs
+            $errors = [];
+            foreach ($form->getErrors(true) as $error) {
+                $errors[] = $error->getMessage();
+            }
+
+            return new JsonResponse([
+                'success' => false,
+                'errors' => $errors,
+            ]);
+        }
+
+        return new JsonResponse([
+            'success' => false,
+            'message' => 'Requête invalide'
+        ], Response::HTTP_BAD_REQUEST);
+    }
+
+
+    #[Route('/{id}', name: 'app_hospitalisation_delete', methods: ['POST'])]
+    public function delete(
+        Request $request,
+        Hospitalisation $hospitalisation,
+        EntityManagerInterface $em
+    ): Response {
+
+        if ($this->isCsrfTokenValid(
+            'delete'.$hospitalisation->getId(),
+            $request->getPayload()->getString('_token')
+        )) {
+            $em->remove($hospitalisation);
+            $em->flush();
+        }
+
+        return $this->redirectToRoute('app_hospitalisation_index');
     }
 }

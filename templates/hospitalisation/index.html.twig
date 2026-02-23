@@ -1,334 +1,376 @@
-{% extends 'base.html.twig' %}
+ {% extends 'base.html.twig' %}
 
 {% block title %}Hospitalisation{% endblock %}
 
 {% block body %}
- <div class="row mb-3 pb-1">
-        <div class="col-12">
-            <div class="d-flex align-items-lg-center flex-lg-row flex-column">
-                <div class="flex-grow-1">
-                    <h4 class="fs-16 mb-1">Bonjour </h4>
-                    <p class="text-muted mb-0">Voici ce qui se passe aujourd'hui.</p>
+<div class="row">
+  <div class="col-12">
+
+    <div class="card card-secondary">
+      <div class="card-header d-flex justify-content-between align-items-center">
+        <h3 class="card-title mb-0">Hospitalisation</h3>
+
+        
+          <button type="button"
+                  class="btn btn-primary"
+                  data-bs-toggle="modal"
+                  data-bs-target="#addHospitalisationModal">
+            <i class="fa-sharp fa-solid fa-plus">Nouvelle hospitalisation</i>
+          </button>
+        
+      </div>
+
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-bordered align-middle text-center mb-0">
+            <thead class="table-light">
+              <tr>
+                <th>Date admission</th>
+                <th>Date sortie</th>
+                <th>Motif</th>
+                <th>Histoire</th>
+                <th>Evolution</th>
+                <th>Conclusion</th>
+                <th>Statut</th>
+                <th>Créé le</th>
+                <th>Modifié le</th>
+                <th style="width: 160px;">Actions</th>
+              </tr>
+            </thead>
+
+            <tbody>
+            {% for hospitalisation in hospitalisations %}
+              <tr>
+                <td>{{ hospitalisation.dateAdmission ? hospitalisation.dateAdmission|date('Y-m-d H:i') : '-' }}</td>
+                <td>{{ hospitalisation.dateSortie ? hospitalisation.dateSortie|date('Y-m-d H:i') : '-' }}</td>
+
+                <td class="text-start">{{ hospitalisation.motifAdmission }}</td>
+
+                {# Colonnes longues : tronquer pour garder une table lisible #}
+                <td class="text-start">
+                  {{ hospitalisation.histoireMaladie ? hospitalisation.histoireMaladie|u.truncate(60, '…', false) : '-' }}
+                </td>
+                <td class="text-start">
+                  {{ hospitalisation.evolution ? hospitalisation.evolution|u.truncate(60, '…', false) : '-' }}
+                </td>
+                <td class="text-start">
+                  {{ hospitalisation.conclusion ? hospitalisation.conclusion|u.truncate(60, '…', false) : '-' }}
+                </td>
+
+                <td>{{ hospitalisation.statut }}</td>
+                <td>{{ hospitalisation.createdAt ? hospitalisation.createdAt|date('Y-m-d H:i') : '-' }}</td>
+                <td>{{ hospitalisation.modifiedAt ? hospitalisation.modifiedAt|date('Y-m-d H:i') : '-' }}</td>
+
+                <td>
+                  <div class="d-flex gap-2 justify-content-center">
+                    <a class="btn btn-sm btn-outline-secondary"
+                       href="{{ path('app_hospitalisation_show', {'id': hospitalisation.id}) }}">
+                      Show
+                    </a>
+
+                    {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %}
+                      <button type="button"
+                              class="btn btn-sm btn-outline-primary js-edit-hospitalisation"
+                              data-id="{{ hospitalisation.id }}"
+                              data-url="{{ path('app_hospitalisation_edit', {'id': hospitalisation.id}) }}">
+                        Edit
+                      </button>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+            {% else %}
+              <tr>
+                <td colspan="10" class="text-muted">Aucun enregistrement.</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{# =========================
+   MODAL AJOUT
+========================= #}
+<div class="modal fade" id="addHospitalisationModal" tabindex="-1" aria-labelledby="addHospitalisationLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addHospitalisationLabel">Ajout Hospitalisation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        {{ form_start(form, {'attr': {'id': 'HospitalisationForm'}}) }}
+          {{ form_widget(form) }}
+          <div class="d-flex justify-content-between mt-3">
+            <button class="btn btn-success">{{ button_label|default('Enregistrer') }}</button>
+            <button type="reset" class="btn btn-secondary">{{ button_label2|default('Vider') }}</button>
+          </div>
+        {{ form_end(form) }}
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fermer</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{# =========================
+   MODAL EDIT (AJAX)
+========================= #}
+<div class="modal fade" id="editHospitalisationModal" tabindex="-1" aria-labelledby="editHospitalisationLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editHospitalisationLabel">Modification</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+
+      <div class="modal-body">
+        <div id="editHospitalisationFormContainer"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const editModalEl = document.getElementById('editHospitalisationModal');
+  const editModal = new bootstrap.Modal(editModalEl);
+  const container = document.getElementById('editHospitalisationFormContainer');
+
+  // Ouvrir modal edit + charger form
+  document.querySelectorAll('.js-edit-hospitalisation').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.preventDefault();
+
+      const url = btn.getAttribute('data-url');
+
+      try {
+        const res = await fetch(url, {
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        // Ici, 2 possibilités selon ton controller:
+        // 1) tu renvoies du HTML (recommandé)
+        // 2) tu renvoies du JSON { form: "<form>...</form>" }
+
+        const contentType = res.headers.get('content-type') || '';
+
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          container.innerHTML = data.form ?? '<div class="alert alert-danger">Formulaire introuvable.</div>';
+        } else {
+          const html = await res.text();
+          container.innerHTML = html;
+        }
+
+        editModal.show();
+      } catch (err) {
+        console.error(err);
+        container.innerHTML = '<div class="alert alert-danger">Erreur lors du chargement du formulaire.</div>';
+        editModal.show();
+      }
+    });
+  });
+
+  // Soumission AJAX du formulaire edit (le form est injecté dans container)
+  document.addEventListener('submit', async (e) => {
+    const form = e.target;
+
+    // IMPORTANT: il faut que ton form édit ait un id="editHospitalisationForm"
+    // ou alors on détecte s'il est dans le container.
+    if (container.contains(form)) {
+      e.preventDefault();
+
+      try {
+        const res = await fetch(form.action, {
+          method: form.method || 'POST',
+          body: new FormData(form),
+          headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const contentType = res.headers.get('content-type') || '';
+
+        if (contentType.includes('application/json')) {
+          const data = await res.json();
+          if (data.success) {
+            window.location.reload();
+            return;
+          }
+          container.innerHTML = data.form ?? '<div class="alert alert-danger">Erreur de validation.</div>';
+        } else {
+          // Si le controller renvoie du HTML (form avec erreurs), on remplace le contenu
+          const html = await res.text();
+          // Option: si tu renvoies une redirection, res.redirected peut être true
+          if (res.redirected) {
+            window.location.href = res.url;
+            return;
+          }
+          container.innerHTML = html;
+        }
+      } catch (err) {
+        console.error(err);
+        alert("Erreur lors de la mise à jour.");
+      }
+    }
+  });
+})();
+</script>
+
+{% endblock %}
+
+
+ 
+ 
+ {# {% extends 'base.html.twig' %}
+
+{% block title %}Hospitalisation{% endblock %}
+
+{% block body %}
+    
+<div class="row align-items-start">
+       <div class="col">
+            <!-- Form Element sizes -->
+            <div class="card card-secondary">
+              <div class="card-header">
+                <h3 class="card-title">Hospitalisation </h3> {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_RH') %} <a  style="float: right;" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addMotoModal"><i class="fa-sharp fa-solid fa-plus"></i></a>
+                {% endif %}
+              </div>
+            <table class="table table-striped table-bordered text-center">
+                <thead>
+                    <tr>
+                         <th>Id</th> 
+                        <th>DateAdmission</th>
+                        <th>DateSortie</th>
+                        <th>MotifAdmission</th>
+                        <th>HistoireMaladie</th>
+                        <th>Evolution</th>
+                        <th>Conclusion</th>
+                        <th>Statut</th>
+                        <th>CreatedAt</th>
+                        <th>ModifiedAt</th>
+                        <th>actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                {% for hospitalisation in hospitalisations %}
+                    <tr>
+                         <td>{{ hospitalisation.id }}</td> 
+                        <td>{{ hospitalisation.dateAdmission ? hospitalisation.dateAdmission|date('Y-m-d H:i:s') : '' }}</td>
+                        <td>{{ hospitalisation.dateSortie ? hospitalisation.dateSortie|date('Y-m-d H:i:s') : '' }}</td>
+                        <td>{{ hospitalisation.motifAdmission }}</td>
+                        <td>{{ hospitalisation.histoireMaladie }}</td>
+                        <td>{{ hospitalisation.evolution }}</td>
+                        <td>{{ hospitalisation.conclusion }}</td>
+                        <td>{{ hospitalisation.statut }}</td>
+                        <td>{{ hospitalisation.createdAt ? hospitalisation.createdAt|date('Y-m-d H:i:s') : '' }}</td>
+                        <td>{{ hospitalisation.modifiedAt ? hospitalisation.modifiedAt|date('Y-m-d H:i:s') : '' }}</td>
+                        <td>
+                            <a href="{{ path('app_hospitalisation_show', {'id': hospitalisation.id}) }}">show</a>
+                            <a href="{{ path('app_hospitalisation_edit', {'id': hospitalisation.id}) }}">edit</a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="11">no records found</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+            </div>
+              <!-- /.card-body -->
+         </div>
+    </div>
+
+    <!-- Modal Bootstrap -->
+    <div class="modal fade" id="addMotoModal" tabindex="-1" aria-labelledby="modalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalLabel">Ajout Hospitalisation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="mt-3 mt-lg-0">
-                    <form action="javascript:void(0);">
-                        <div class="row g-3 mb-0 align-items-center">
-                            <div class="col-sm-auto">
-                                <div class="input-group">
-                                    <input type="text" class="form-control border-0 minimal-border dash-filter-picker shadow" 
-                                           data-provider="flatpickr" data-range-date="true" 
-                                           data-date-format="d M, Y" 
-                                           data-deafult-date="01 Jan 2022 to 31 Jan 2022">
-                                    <div class="input-group-text bg-primary border-primary text-white">
-                                        <i class="ri-calendar-2-line"></i>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-auto">
-                                <a href="#" class="btn btn-soft-success material-shadow-none">
-                                    <i class="ri-add-circle-line align-middle me-1"></i> Ajouter
-                                </a>
-                            </div>
-                        </div>
-                    </form>
+                <div class="modal-body">
+                    {{ form_start(form) }}
+                        {{ form_widget(form, {'attr': {'id': 'HospitalisationForm'}}) }}
+                        <button class="btn btn-success" style="margin-right: 10px;">{{ button_label|default('Enregistrer') }}</button>
+                        <button type="reset" class="btn btn-secondary" style="float: right;">{{ button_label2|default('Vider') }}</button>
+                    {{ form_end(form) }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
                 </div>
             </div>
         </div>
     </div>
-     <div class="row">
-                                    <div class="col-xl-3 col-md-6">
-                                        <!-- card -->
-                                        <div class="card card-animate">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1 overflow-hidden">
-                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0"> Total Earnings</p>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="text-success fs-14 mb-0">
-                                                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +16.24 %
-                                                        </h5>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-end justify-content-between mt-4">
-                                                    <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">$<span class="counter-value" data-target="559.25">0</span>k </h4>
-                                                        <a href="" class="text-decoration-underline">View net earnings</a>
-                                                    </div>
-                                                    <div class="avatar-sm flex-shrink-0">
-                                                        <span class="avatar-title bg-success-subtle rounded fs-3">
-                                                            <i class="bx bx-dollar-circle text-success"></i>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card body -->
-                                        </div><!-- end card -->
-                                    </div><!-- end col -->
 
-                                    <div class="col-xl-3 col-md-6">
-                                        <!-- card -->
-                                        <div class="card card-animate">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1 overflow-hidden">
-                                                     <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Orders</p>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="text-danger fs-14 mb-0">
-                                                            <i class="ri-arrow-right-down-line fs-13 align-middle"></i> -3.57 %
-                                                        </h5>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-end justify-content-between mt-4">
-                                                    <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" data-target="36894">0</span></h4>
-                                                        <a href="" class="text-decoration-underline">View all orders</a>
-                                                    </div>
-                                                    <div class="avatar-sm flex-shrink-0">
-                                                        <span class="avatar-title bg-info-subtle rounded fs-3">
-                                                            <i class="bx bx-shopping-bag text-info"></i>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card body -->
-                                        </div><!-- end card -->
-                                    </div><!-- end col -->
+    <!-- Modal Bootstrap pour l'édition -->
+    <div class="modal fade" id="editBailleurModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Modification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="editHospitalisationForm"></div> 
+            </div>
+        </div>
+    </div>
 
-                                    <div class="col-xl-3 col-md-6">
-                                        <!-- card -->
-                                        <div class="card card-animate">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1 overflow-hidden">
-                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0">Customers</p>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="text-success fs-14 mb-0">
-                                                            <i class="ri-arrow-right-up-line fs-13 align-middle"></i> +29.08 %
-                                                        </h5>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-end justify-content-between mt-4">
-                                                    <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4"><span class="counter-value" data-target="183.35">0</span>M </h4>
-                                                        <a href="" class="text-decoration-underline">See details</a>
-                                                    </div>
-                                                    <div class="avatar-sm flex-shrink-0">
-                                                        <span class="avatar-title bg-warning-subtle rounded fs-3">
-                                                            <i class="bx bx-user-circle text-warning"></i>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card body -->
-                                        </div><!-- end card -->
-                                    </div><!-- end col -->
+    <script>
+    // Gestion de l'édition des agents
+    document.querySelectorAll(".edit-btn_bailleur").forEach(button => {
+        button.addEventListener("click", function (event) {
+            event.preventDefault();
+            const bailleurId = this.getAttribute("data-id");
 
-                                    <div class="col-xl-3 col-md-6">
-                                        <!-- card -->
-                                        <div class="card card-animate">
-                                            <div class="card-body">
-                                                <div class="d-flex align-items-center">
-                                                    <div class="flex-grow-1 overflow-hidden">
-                                                        <p class="text-uppercase fw-medium text-muted text-truncate mb-0"> My Balance</p>
-                                                    </div>
-                                                    <div class="flex-shrink-0">
-                                                        <h5 class="text-muted fs-14 mb-0">
-                                                            +0.00 %
-                                                        </h5>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-end justify-content-between mt-4">
-                                                    <div>
-                                                        <h4 class="fs-22 fw-semibold ff-secondary mb-4">$<span class="counter-value" data-target="165.89">0</span>k </h4>
-                                                        <a href="" class="text-decoration-underline">Withdraw money</a>
-                                                    </div>
-                                                    <div class="avatar-sm flex-shrink-0">
-                                                        <span class="avatar-title bg-primary-subtle rounded fs-3">
-                                                            <i class="bx bx-wallet text-primary"></i>
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card body -->
-                                        </div><!-- end card -->
-                                    </div><!-- end col -->
-                                </div> <!-- end row-->
+            fetch(`/bailleur/${bailleurId}/edit`, {
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.form) {
+                    document.getElementById("editBailleurForm").innerHTML = data.form;
+                    const editModal = new bootstrap.Modal(document.getElementById("editBailleurModal"));
+                    editModal.show();
+                }
+            })
+            .catch(error => console.error("Erreur lors du chargement du formulaire :", error));
+        });
+    });
 
- <div class="row">
-                                    <div class="col-xl-4">
-                                        <div class="card card-height-100">
-                                            <div class="card-header align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Store Visits by Source</h4>
-                                                <div class="flex-shrink-0">
-                                                    <div class="dropdown card-header-dropdown">
-                                                        <a class="text-reset dropdown-btn" href="#" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                            <span class="text-muted">Report<i class="mdi mdi-chevron-down ms-1"></i></span>
-                                                        </a>
-                                                        <div class="dropdown-menu dropdown-menu-end">
-                                                            <a class="dropdown-item" href="#">Download Report</a>
-                                                            <a class="dropdown-item" href="#">Export</a>
-                                                            <a class="dropdown-item" href="#">Import</a>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div><!-- end card header -->
+    // Soumission du formulaire d'édition en AJAX
+    document.addEventListener("submit", function (event) {
+        if (event.target && event.target.matches("#editBailleurForm")) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
 
-                                            <div class="card-body">
-                                                <div id="store-visits-source" data-colors='["--vz-primary", "--vz-success", "--vz-warning", "--vz-danger", "--vz-info"]' data-colors-minimal='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' data-colors-interactive='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' data-colors-galaxy='["--vz-primary", "--vz-primary-rgb, 0.85", "--vz-primary-rgb, 0.70", "--vz-primary-rgb, 0.60", "--vz-primary-rgb, 0.45"]' class="apex-charts" dir="ltr"></div>
-                                            </div>
-                                        </div> <!-- .card-->
-                                    </div> <!-- .col-->
-
-                                    <div class="col-xl-8">
-                                        <div class="card">
-                                            <div class="card-header align-items-center d-flex">
-                                                <h4 class="card-title mb-0 flex-grow-1">Recent Orders</h4>
-                                                <div class="flex-shrink-0">
-                                                    <button type="button" class="btn btn-soft-info btn-sm material-shadow-none">
-                                                        <i class="ri-file-list-3-line align-middle"></i> Generate Report
-                                                    </button>
-                                                </div>
-                                            </div><!-- end card header -->
-
-                                            <div class="card-body">
-                                                <div class="table-responsive table-card">
-                                                    <table class="table table-borderless table-centered align-middle table-nowrap mb-0">
-                                                        <thead class="text-muted table-light">
-                                                            <tr>
-                                                                <th scope="col">Order ID</th>
-                                                                <th scope="col">Customer</th>
-                                                                <th scope="col">Product</th>
-                                                                <th scope="col">Amount</th>
-                                                                <th scope="col">Vendor</th>
-                                                                <th scope="col">Status</th>
-                                                                <th scope="col">Rating</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody>
-                                                            <tr>
-                                                                <td>
-                                                                    <a href="apps-ecommerce-order-details.html" class="fw-medium link-primary">#VZ2112</a>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/users/avatar-1.jpg" alt="" class="avatar-xs rounded-circle material-shadow" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">Alex Smith</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>Clothes</td>
-                                                                <td>
-                                                                    <span class="text-success">$109.00</span>
-                                                                </td>
-                                                                <td>Zoetic Fashion</td>
-                                                                <td>
-                                                                    <span class="badge bg-success-subtle text-success">Paid</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 fw-medium mb-0">5.0<span class="text-muted fs-11 ms-1">(61 votes)</span></h5>
-                                                                </td>
-                                                            </tr><!-- end tr -->
-                                                            <tr>
-                                                                <td>
-                                                                    <a href="apps-ecommerce-order-details.html" class="fw-medium link-primary">#VZ2111</a>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/users/avatar-2.jpg" alt="" class="avatar-xs rounded-circle material-shadow" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">Jansh Brown</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>Kitchen Storage</td>
-                                                                <td>
-                                                                    <span class="text-success">$149.00</span>
-                                                                </td>
-                                                                <td>Micro Design</td>
-                                                                <td>
-                                                                    <span class="badge bg-warning-subtle text-warning">Pending</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 fw-medium mb-0">4.5<span class="text-muted fs-11 ms-1">(61 votes)</span></h5>
-                                                                </td>
-                                                            </tr><!-- end tr -->
-                                                            <tr>
-                                                                <td>
-                                                                    <a href="apps-ecommerce-order-details.html" class="fw-medium link-primary">#VZ2109</a>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/users/avatar-3.jpg" alt="" class="avatar-xs rounded-circle material-shadow" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">Ayaan Bowen</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>Bike Accessories</td>
-                                                                <td>
-                                                                    <span class="text-success">$215.00</span>
-                                                                </td>
-                                                                <td>Nesta Technologies</td>
-                                                                <td>
-                                                                    <span class="badge bg-success-subtle text-success">Paid</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 fw-medium mb-0">4.9<span class="text-muted fs-11 ms-1">(89 votes)</span></h5>
-                                                                </td>
-                                                            </tr><!-- end tr -->
-                                                            <tr>
-                                                                <td>
-                                                                    <a href="apps-ecommerce-order-details.html" class="fw-medium link-primary">#VZ2108</a>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/users/avatar-4.jpg" alt="" class="avatar-xs rounded-circle material-shadow" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">Prezy Mark</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>Furniture</td>
-                                                                <td>
-                                                                    <span class="text-success">$199.00</span>
-                                                                </td>
-                                                                <td>Syntyce Solutions</td>
-                                                                <td>
-                                                                    <span class="badge bg-danger-subtle text-danger">Unpaid</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 fw-medium mb-0">4.3<span class="text-muted fs-11 ms-1">(47 votes)</span></h5>
-                                                                </td>
-                                                            </tr><!-- end tr -->
-                                                            <tr>
-                                                                <td>
-                                                                    <a href="apps-ecommerce-order-details.html" class="fw-medium link-primary">#VZ2107</a>
-                                                                </td>
-                                                                <td>
-                                                                    <div class="d-flex align-items-center">
-                                                                        <div class="flex-shrink-0 me-2">
-                                                                            <img src="assets/images/users/avatar-6.jpg" alt="" class="avatar-xs rounded-circle material-shadow" />
-                                                                        </div>
-                                                                        <div class="flex-grow-1">Vihan Hudda</div>
-                                                                    </div>
-                                                                </td>
-                                                                <td>Bags and Wallets</td>
-                                                                <td>
-                                                                    <span class="text-success">$330.00</span>
-                                                                </td>
-                                                                <td>iTest Factory</td>
-                                                                <td>
-                                                                    <span class="badge bg-success-subtle text-success">Paid</span>
-                                                                </td>
-                                                                <td>
-                                                                    <h5 class="fs-14 fw-medium mb-0">4.7<span class="text-muted fs-11 ms-1">(161 votes)</span></h5>
-                                                                </td>
-                                                            </tr><!-- end tr -->
-                                                        </tbody><!-- end tbody -->
-                                                    </table><!-- end table -->
-                                                </div>
-                                            </div>
-                                        </div> <!-- .card-->
-                                    </div> <!-- .col-->
-                                </div> <!-- end row-->
-{% endblock %}
+            fetch(form.action, {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert("Les données agent ont été mises à jour avec succès !");
+                    location.reload(); // Recharger la page après la modification
+                } else {
+                    alert("Erreur : " + data.errors);
+                }
+            })
+            .catch(error => console.error("Erreur lors de la mise à jour :", error));
+        }
+    });
+</script>
+     <a href="{{ path('app_hospitalisation_new') }}">Create new</a> 
+{% endblock %}  #}

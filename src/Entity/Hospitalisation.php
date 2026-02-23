@@ -9,6 +9,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
 
 #[ORM\Entity(repositoryClass: HospitalisationRepository::class)]
+#[ORM\HasLifecycleCallbacks] 
 class Hospitalisation
 {
     use TimestampableTrait;
@@ -18,13 +19,15 @@ class Hospitalisation
     #[ORM\Column]
     private ?int $id = null;
 
+    // ✅ Nullable en PHP pour permettre new Hospitalisation() + form binding
     #[ORM\ManyToOne(inversedBy: 'hospitalisations')]
     #[ORM\JoinColumn(nullable: false)]
-    private DossierMedical $dossierMedical;
+    private ?DossierMedical $dossierMedical = null;
 
+    // ✅ Nullable en PHP pour permettre new Hospitalisation() + form binding
     #[ORM\ManyToOne(inversedBy: 'hospitalisations')]
     #[ORM\JoinColumn(nullable: false)]
-    private Utilisateur $medecinReferent;
+    private ?Utilisateur $medecinReferent = null;
 
     #[ORM\Column(type: 'datetime_immutable')]
     private \DateTimeImmutable $dateAdmission;
@@ -33,7 +36,7 @@ class Hospitalisation
     private ?\DateTimeImmutable $dateSortie = null;
 
     #[ORM\Column(length: 255)]
-    private string $motifAdmission;
+    private string $motifAdmission = '';
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $histoireMaladie = null;
@@ -62,19 +65,15 @@ class Hospitalisation
     #[ORM\OneToMany(mappedBy: 'hospitalisation', targetEntity: TraitementHospitalisation::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
     private Collection $traitements;
 
-    public function __construct(
-        DossierMedical $dossierMedical,
-        Utilisateur $medecinReferent,
-        string $motifAdmission
-    ) {
-        $this->dossierMedical = $dossierMedical;
-        $this->medecinReferent = $medecinReferent;
-        $this->motifAdmission = $motifAdmission;
-        $this->dateAdmission = new \DateTimeImmutable();
-        $this->statut = StatutHospitalisation::EN_COURS;
-        $this->traitements = new ArrayCollection();
+    public function __construct()
+    {
+        // ✅ Important: initialiser toutes les collections
         $this->examensComplementaires = new ArrayCollection();
         $this->antecedents = new ArrayCollection();
+        $this->traitements = new ArrayCollection();
+
+        // ✅ Valeur par défaut utile (sinon propriété non initialisée)
+        $this->dateAdmission = new \DateTimeImmutable();
     }
 
     // --------------------
@@ -86,12 +85,12 @@ class Hospitalisation
         return $this->id;
     }
 
-    public function getDossierMedical(): DossierMedical
+    public function getDossierMedical(): ?DossierMedical
     {
         return $this->dossierMedical;
     }
 
-    public function getMedecinReferent(): Utilisateur
+    public function getMedecinReferent(): ?Utilisateur
     {
         return $this->medecinReferent;
     }
@@ -131,6 +130,32 @@ class Hospitalisation
         return $this->statut;
     }
 
+    public function getExamenClinique(): ?ExamenClinique
+    {
+        return $this->examenClinique;
+    }
+
+    public function getExamenNeurologique(): ?ExamenNeurologique
+    {
+        return $this->examenNeurologique;
+    }
+
+    /**
+     * @return Collection<int, ExamenComplementaire>
+     */
+    public function getExamensComplementaires(): Collection
+    {
+        return $this->examensComplementaires;
+    }
+
+    /**
+     * @return Collection<int, Antecedent>
+     */
+    public function getAntecedents(): Collection
+    {
+        return $this->antecedents;
+    }
+
     /**
      * @return Collection<int, TraitementHospitalisation>
      */
@@ -140,8 +165,38 @@ class Hospitalisation
     }
 
     // --------------------
-    // SETTERS contrôlés
+    // SETTERS
     // --------------------
+
+    public function setDossierMedical(?DossierMedical $dossierMedical): self
+    {
+        $this->dossierMedical = $dossierMedical;
+        return $this;
+    }
+
+    public function setMedecinReferent(?Utilisateur $medecinReferent): self
+    {
+        $this->medecinReferent = $medecinReferent;
+        return $this;
+    }
+
+    public function setDateAdmission(\DateTimeImmutable $dateAdmission): self
+    {
+        $this->dateAdmission = $dateAdmission;
+        return $this;
+    }
+
+    public function setDateSortie(?\DateTimeImmutable $dateSortie): self
+    {
+        $this->dateSortie = $dateSortie;
+        return $this;
+    }
+
+    public function setMotifAdmission(string $motifAdmission): self
+    {
+        $this->motifAdmission = $motifAdmission;
+        return $this;
+    }
 
     public function setHistoireMaladie(?string $histoireMaladie): self
     {
@@ -161,44 +216,10 @@ class Hospitalisation
         return $this;
     }
 
-    public function setDossierMedical(DossierMedical $dossierMedical): self
-    {
-        $this->dossierMedical = $dossierMedical;
-
-        return $this;
-    }
-
-    public function setMedecinReferent(Utilisateur $medecinReferent): self
-    {
-        $this->medecinReferent = $medecinReferent;
-
-        return $this;
-    }
-
-    public function setDateSortie(?\DateTimeImmutable $dateSortie): self
-    {
-        $this->dateSortie = $dateSortie;
-
-        return $this;
-    }
-
-    public function setMotifAdmission(string $motifAdmission): self
-    {
-        $this->motifAdmission = $motifAdmission;
-
-        return $this;
-    }
-
     public function setStatut(StatutHospitalisation $statut): self
     {
         $this->statut = $statut;
-
         return $this;
-    }
-
-    public function getExamenClinique(): ?ExamenClinique
-    {
-        return $this->examenClinique;
     }
 
     public function setExamenClinique(?ExamenClinique $examenClinique): self
@@ -212,11 +233,6 @@ class Hospitalisation
         return $this;
     }
 
-    public function getExamenNeurologique(): ?ExamenNeurologique
-    {
-        return $this->examenNeurologique;
-    }
-
     public function setExamenNeurologique(?ExamenNeurologique $examenNeurologique): self
     {
         $this->examenNeurologique = $examenNeurologique;
@@ -228,21 +244,12 @@ class Hospitalisation
         return $this;
     }
 
-    /**
-     * @return Collection<int, ExamenComplementaire>
-     */
-    public function getExamensComplementaires(): Collection
-    {
-        return $this->examensComplementaires;
-    }
-
     public function addExamenComplementaire(ExamenComplementaire $examen): self
     {
         if (!$this->examensComplementaires->contains($examen)) {
             $this->examensComplementaires->add($examen);
             $examen->setHospitalisation($this);
         }
-
         return $this;
     }
 
@@ -253,16 +260,7 @@ class Hospitalisation
                 $examen->setHospitalisation(null);
             }
         }
-
         return $this;
-    }
-
-    /**
-     * @return Collection<int, Antecedent>
-     */
-    public function getAntecedents(): Collection
-    {
-        return $this->antecedents;
     }
 
     public function addAntecedent(Antecedent $antecedent): self
@@ -271,7 +269,6 @@ class Hospitalisation
             $this->antecedents->add($antecedent);
             $antecedent->setHospitalisation($this);
         }
-
         return $this;
     }
 
@@ -282,7 +279,6 @@ class Hospitalisation
                 $antecedent->setHospitalisation(null);
             }
         }
-
         return $this;
     }
 
@@ -292,7 +288,6 @@ class Hospitalisation
             $this->traitements->add($traitement);
             $traitement->setHospitalisation($this);
         }
-
         return $this;
     }
 
@@ -303,7 +298,17 @@ class Hospitalisation
                 $traitement->setHospitalisation(null);
             }
         }
-
         return $this;
+    }
+
+    // (Optionnel) Factory métier si tu veux imposer des invariants
+    public static function creer(DossierMedical $dossier, Utilisateur $medecin, string $motif): self
+    {
+        $self = new self();
+        $self->dossierMedical = $dossier;
+        $self->medecinReferent = $medecin;
+        $self->motifAdmission = $motif;
+
+        return $self;
     }
 }
