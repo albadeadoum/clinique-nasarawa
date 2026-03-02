@@ -34,33 +34,6 @@ class Consultation
     #[ORM\Column(enumType: StatutConsultation::class)]
     private StatutConsultation $statut = StatutConsultation::BROUILLON;
 
-    public function getRendezVous(): ?RendezVous
-    {
-        return $this->rendezVous;
-    }
-
-    public function setRendezVous(RendezVous $rendezVous): self
-    {
-        $this->rendezVous = $rendezVous;
-
-        if ($rendezVous->getConsultation() !== $this) {
-            $rendezVous->setConsultation($this);
-        }
-
-        return $this;
-    }
-
-    public function getStatut(): StatutConsultation
-    {
-        return $this->statut;
-    }
-
-    public function setStatut(StatutConsultation $statut): self
-    {
-        $this->statut = $statut;
-        return $this;
-    }
-
     #[ORM\Column(nullable: true)]
     private ?float $poids = null;
 
@@ -87,6 +60,81 @@ class Consultation
 
     #[ORM\OneToOne(mappedBy: 'consultation', targetEntity: Facture::class)]
     private ?Facture $facture = null;
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $histoire = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $examenClinique = null;
+
+    #[ORM\Column(type: 'text', nullable: true)]
+    private ?string $conduiteATenir = null;
+
+    // Optionnel : CIM10
+    #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: true)]
+    private ?Cim10Code $cim10 = null;
+
+    #[ORM\OneToMany(mappedBy: 'consultation', targetEntity: ExamenDemande::class, orphanRemoval: true, cascade: ['persist'])]
+    private Collection $examensDemandes;
+
+    #[ORM\OneToMany(mappedBy: 'consultation', targetEntity: ActeRealise::class, orphanRemoval: true, cascade: ['persist'])]
+    private Collection $actesRealises;
+
+    public function getHistoire(): ?string { return $this->histoire; }
+    public function setHistoire(?string $histoire): self { $this->histoire = $histoire; return $this; }
+
+    public function getExamenClinique(): ?string { return $this->examenClinique; }
+    public function setExamenClinique(?string $examenClinique): self { $this->examenClinique = $examenClinique; return $this; }
+
+    public function getConduiteATenir(): ?string { return $this->conduiteATenir; }
+    public function setConduiteATenir(?string $conduiteATenir): self { $this->conduiteATenir = $conduiteATenir; return $this; }
+
+    public function getCim10(): ?Cim10Code { return $this->cim10; }
+    public function setCim10(?Cim10Code $cim10): self { $this->cim10 = $cim10; return $this; }
+
+    /** @return Collection<int, ExamenDemande> */
+    public function getExamensDemandes(): Collection { return $this->examensDemandes; }
+
+    public function addExamenDemande(ExamenDemande $examen): self
+    {
+        if (!$this->examensDemandes->contains($examen)) {
+            $this->examensDemandes->add($examen);
+            $examen->setConsultation($this);
+        }
+        return $this;
+    }
+
+    public function removeExamenDemande(ExamenDemande $examen): self
+    {
+        if ($this->examensDemandes->removeElement($examen)) {
+            if ($examen->getConsultation() === $this) {
+                $examen->setConsultation(null);
+            }
+        }
+        return $this;
+    }
+
+    /** @return Collection<int, ActeRealise> */
+    public function getActesRealises(): Collection { return $this->actesRealises; }
+
+    public function addActeRealise(ActeRealise $acte): self
+    {
+        if (!$this->actesRealises->contains($acte)) {
+            $this->actesRealises->add($acte);
+            $acte->setConsultation($this);
+        }
+        return $this;
+    }
+
+    public function removeActeRealise(ActeRealise $acte): self
+    {
+        if ($this->actesRealises->removeElement($acte)) {
+            if ($acte->getConsultation() === $this) {
+                $acte->setConsultation(null);
+            }
+        }
+        return $this;
+    }
 
     public function __construct()
     {
@@ -248,6 +296,32 @@ class Consultation
             $facture->setConsultation($this);
         }
 
+        return $this;
+    }
+    public function getRendezVous(): ?RendezVous
+    {
+        return $this->rendezVous;
+    }
+
+    public function setRendezVous(RendezVous $rendezVous): self
+    {
+        $this->rendezVous = $rendezVous;
+
+        if ($rendezVous->getConsultation() !== $this) {
+            $rendezVous->setConsultation($this);
+        }
+
+        return $this;
+    }
+
+    public function getStatut(): StatutConsultation
+    {
+        return $this->statut;
+    }
+
+    public function setStatut(StatutConsultation $statut): self
+    {
+        $this->statut = $statut;
         return $this;
     }
 }

@@ -10,12 +10,12 @@
       <div class="card-header d-flex justify-content-between align-items-center">
         <h3 class="card-title mb-0">Liste des Consultations</h3>
 
-        <button type="button"
+{#         <button type="button"
                 class="btn btn-success"
                 data-bs-toggle="modal"
                 data-bs-target="#addConsultationModal">
           <i class="fa fa-plus"></i> Nouvelle consultation
-        </button>
+        </button> #}
       </div>
 
       <div class="card-body">
@@ -57,7 +57,7 @@
                             title="Modifier"
                             data-bs-toggle="modal"
                             data-bs-target="#editConsultationModal"
-                            data-url="{{ path('app_consultation_edit', {'id': c.id}) }}">
+                            data-url="{{ path('app_consultation_medical_edit', {'id': c.id}) }}">
                       <i class="ri-pencil-fill"></i>
                     </button>
                   </div>
@@ -81,7 +81,7 @@
 {# =========================
    MODAL AJOUT CONSULTATION
 ========================= #}
-<div class="modal fade" id="addConsultationModal" tabindex="-1">
+{# <div class="modal fade" id="addConsultationModal" tabindex="-1">
   <div class="modal-dialog modal-xl modal-dialog-scrollable">
     <div class="modal-content">
 
@@ -120,7 +120,7 @@
     </div>
   </div>
 </div>
-
+ #}
 {# =========================
    MODAL EDIT CONSULTATION (AJAX)
 ========================= #}

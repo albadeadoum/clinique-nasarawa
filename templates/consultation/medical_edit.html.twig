@@ -1,0 +1,121 @@
+
+{% block title %}Saisie médicale — Consultation #{{ consultation.id }}{% endblock %}
+
+{% block body %}
+<div class="container-fluid">
+
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h3 class="mb-1">Saisie médicale</h3>
+            <div class="text-muted">
+                Consultation <span class="fw-semibold">#{{ consultation.id }}</span>
+                {% if consultation.rendezVous is defined and consultation.rendezVous %}
+                    — RDV #{{ consultation.rendezVous.id }}
+                    {% if consultation.rendezVous.dateHeure is defined %}
+                        ({{ consultation.rendezVous.dateHeure|date('Y-m-d H:i') }})
+                    {% endif %}
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ path('app_consultation_show', {id: consultation.id}) }}" class="btn btn-outline-secondary">
+                <i class="fa fa-arrow-left me-1"></i> Retour
+            </a>
+
+            <button form="medicalForm" type="submit" class="btn btn-primary">
+                <i class="fa fa-save me-1"></i> Enregistrer
+            </button>
+        </div>
+    </div>
+
+    {{ form_start(form, { attr: { id: 'medicalForm' } }) }}
+
+    <div class="row g-3">
+        {# ===================== CONSTANCES ===================== #}
+        <div class="col-12 col-lg-4">
+            <div class="card h-100">
+                <div class="card-header fw-semibold">Constantes vitales</div>
+                <div class="card-body">
+                    <div class="row g-2">
+                        <div class="col-12">
+                            {{ form_row(form.poids) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.taille) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.temperature) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.tensionArterielle) }}
+                        </div>
+                        <div class="col-12">
+                            {{ form_row(form.frequenceCardiaque) }}
+                        </div>
+                    </div>
+
+                    <div class="mt-3 text-muted small">
+                        Astuce : “Tension artérielle” au format <span class="fw-semibold">120/80</span>.
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ===================== CLINIQUE ===================== #}
+        <div class="col-12 col-lg-8">
+            <div class="card">
+                <div class="card-header fw-semibold">Clinique</div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        {{ form_row(form.motifs) }}
+                    </div>
+                    <div class="mb-3">
+                       {% if form.histoire is defined %}
+    {{ form_row(form.histoire) }}
+{% endif %}
+                    </div>
+                    <div class="mb-3">
+                       {% if form.examenClinique is defined %}{{ form_row(form.examenClinique) }}{% endif %}
+                    </div>
+                    <div class="mb-3">
+                       {% if form.diagnostic is defined %}{{ form_row(form.diagnostic) }}{% endif %}
+                    </div>
+
+                    {# CIM10 optionnel : affiché seulement si le champ existe dans le form #}
+                    {% if form.cim10 is defined %}
+                        <div class="mb-3">
+                           {% if form.cim10 is defined %}{{ form_row(form.cim10) }}{% endif %}
+                        </div>
+                    {% endif %}
+
+                    <div class="mb-0">
+                        {% if form.conduiteATenir is defined %}{{ form_row(form.conduiteATenir) }}{% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ===================== FOOTER ===================== #}
+        <div class="col-12">
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mt-2">
+                <div class="text-muted small">
+                    Créée : {{ consultation.createdAt ? consultation.createdAt|date('Y-m-d H:i') : '-' }}
+                    — Modifiée : {{ consultation.modifiedAt ? consultation.modifiedAt|date('Y-m-d H:i') : '-' }}
+                </div>
+
+                <div class="d-flex gap-2">
+                    <a href="{{ path('app_consultation_show', {id: consultation.id}) }}" class="btn btn-outline-secondary">
+                        Annuler
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa fa-save me-1"></i> Enregistrer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{ form_end(form) }}
+</div>
+{% endblock %}

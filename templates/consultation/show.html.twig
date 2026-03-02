@@ -1,58 +1,331 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Consultation{% endblock %}
+{% block title %}Consultation #{{ consultation.id }}{% endblock %}
 
 {% block body %}
-    <h1>Consultation</h1>
+<div class="container-fluid">
+    {# ===================== HEADER ===================== #}
+    <div class="d-flex flex-wrap justify-content-between align-items-start gap-2 mb-3">
+        <div>
+            <h3 class="mb-1">
+                Consultation <span class="text-muted">#{{ consultation.id }}</span>
+            </h3>
 
-    <table class="table">
-        <tbody>
-            <tr>
-                <th>Id</th>
-                <td>{{ consultation.id }}</td>
-            </tr>
-            <tr>
-                <th>Poids</th>
-                <td>{{ consultation.poids }}</td>
-            </tr>
-            <tr>
-                <th>Taille</th>
-                <td>{{ consultation.taille }}</td>
-            </tr>
-            <tr>
-                <th>Temperature</th>
-                <td>{{ consultation.temperature }}</td>
-            </tr>
-            <tr>
-                <th>TensionArterielle</th>
-                <td>{{ consultation.tensionArterielle }}</td>
-            </tr>
-            <tr>
-                <th>Motifs</th>
-                <td>{{ consultation.motifs }}</td>
-            </tr>
-            <tr>
-                <th>Diagnostic</th>
-                <td>{{ consultation.diagnostic }}</td>
-            </tr>
-            <tr>
-                <th>FrequenceCardiaque</th>
-                <td>{{ consultation.frequenceCardiaque }}</td>
-            </tr>
-            <tr>
-                <th>CreatedAt</th>
-                <td>{{ consultation.createdAt ? consultation.createdAt|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-            <tr>
-                <th>ModifiedAt</th>
-                <td>{{ consultation.modifiedAt ? consultation.modifiedAt|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-        </tbody>
-    </table>
+            <div class="text-muted small">
+                {% if consultation.rendezVous is defined and consultation.rendezVous %}
+                    RDV #{{ consultation.rendezVous.id }}
+                    {% if consultation.rendezVous.dateHeure is defined %}
+                        — {{ consultation.rendezVous.dateHeure|date('Y-m-d H:i') }}
+                    {% endif %}
+                {% endif %}
+            </div>
 
-    <a href="{{ path('app_consultation_index') }}">back to list</a>
+            <div class="mt-2 d-flex flex-wrap gap-2">
+                {# Statut consultation #}
+                {% if consultation.statut is defined and consultation.statut %}
+                    {% set st = consultation.statut.name ?? consultation.statut.value ?? '' %}
+                    {% set badgeClass =
+                        st in ['EN_COURS'] ? 'bg-primary' :
+                        st in ['BROUILLON'] ? 'bg-secondary' :
+                        st in ['CLOTURE','CLOTUREE'] ? 'bg-success' :
+                        st in ['ANNULE','ANNULEE'] ? 'bg-danger' :
+                        'bg-dark'
+                    %}
+                    <span class="badge {{ badgeClass }}">{{ st }}</span>
+                {% endif %}
 
-    <a href="{{ path('app_consultation_edit', {'id': consultation.id}) }}">edit</a>
+                {# Médecin #}
+                {% if consultation.medecin is defined and consultation.medecin %}
+                    <span class="badge bg-light text-dark border">
+                        Médecin :
+                        {{ consultation.medecin.nomComplet
+                            ?? (consultation.medecin.nom ~ ' ' ~ consultation.medecin.prenom)
+                            ?? consultation.medecin.id
+                        }}
+                    </span>
+                {% endif %}
 
-    {{ include('consultation/_delete_form.html.twig') }}
+                {# Patient #}
+                {% if consultation.rendezVous is defined and consultation.rendezVous and consultation.rendezVous.patient is defined and consultation.rendezVous.patient %}
+                    <span class="badge bg-light text-dark border">
+                        Patient :
+                        {{ consultation.rendezVous.patient.nomComplet
+                            ?? (consultation.rendezVous.patient.nom ~ ' ' ~ consultation.rendezVous.patient.prenom)
+                            ?? consultation.rendezVous.patient.id
+                        }}
+                    </span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# ===================== ACTIONS ===================== #}
+        <div class="d-flex flex-wrap gap-2">
+            <a href="{{ path('app_consultation_index') }}" class="btn btn-outline-secondary">
+                <i class="fa fa-arrow-left me-1"></i> Retour
+            </a>
+
+            {# Bouton édition Phase C : désactivé si clôturée/annulée #}
+            {% set stName = (consultation.statut.name ?? '') %}
+            {% set locked = stName in ['CLOTURE', 'CLOTUREE', 'ANNULE', 'ANNULEE'] %}
+
+            <a href="{{ path('app_consultation_medical_edit', {id: consultation.id}) }}"
+               class="btn btn-primary {{ locked ? 'disabled' : '' }}">
+                <i class="fa fa-pen me-1"></i> Saisie médicale
+            </a>
+
+            {# On garde delete mais idéalement réservé admin #}
+            {{ include('consultation/_delete_form.html.twig') }}
+        </div>
+    </div>
+
+    {# ===================== KPI CARDS (Constantes) ===================== #}
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Poids</div>
+                    <div class="fs-4 fw-semibold">
+                        {{ consultation.poids ?? '-' }} <span class="text-muted fs-6">kg</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Taille</div>
+                    <div class="fs-4 fw-semibold">
+                        {{ consultation.taille ?? '-' }} <span class="text-muted fs-6">cm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Température</div>
+                    <div class="fs-4 fw-semibold">
+                        {{ consultation.temperature ?? '-' }} <span class="text-muted fs-6">°C</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-6 col-xl-3">
+            <div class="card h-100">
+                <div class="card-body">
+                    <div class="text-muted small">Fréquence cardiaque</div>
+                    <div class="fs-4 fw-semibold">
+                        {{ consultation.frequenceCardiaque ?? '-' }} <span class="text-muted fs-6">bpm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {# ===================== TABS ===================== #}
+    <ul class="nav nav-tabs" id="consultTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="tab-clinique" data-bs-toggle="tab" data-bs-target="#pane-clinique"
+                    type="button" role="tab">
+                Clinique
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-prescriptions" data-bs-toggle="tab" data-bs-target="#pane-prescriptions"
+                    type="button" role="tab">
+                Prescriptions
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-examens" data-bs-toggle="tab" data-bs-target="#pane-examens"
+                    type="button" role="tab">
+                Examens demandés
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="tab-actes" data-bs-toggle="tab" data-bs-target="#pane-actes"
+                    type="button" role="tab">
+                Actes réalisés
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content border border-top-0 rounded-bottom p-3" id="consultTabsContent">
+
+        {# ========== CLINIQUE ========== #}
+        <div class="tab-pane fade show active" id="pane-clinique" role="tabpanel">
+            <div class="row g-3">
+                <div class="col-12 col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Motif & Histoire</div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <div class="text-muted small">Motifs</div>
+                                <div>{{ consultation.motifs ?? '-' }}</div>
+                            </div>
+                            <div>
+                                <div class="text-muted small">Histoire / Anamnèse</div>
+                                <div>{{ consultation.histoire ?? '-' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-6">
+                    <div class="card h-100">
+                        <div class="card-header fw-semibold">Examen & Diagnostic</div>
+                        <div class="card-body">
+                            <div class="mb-2">
+                                <div class="text-muted small">Examen clinique</div>
+                                <div>{{ consultation.examenClinique ?? '-' }}</div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="text-muted small">Tension artérielle</div>
+                                <div>{{ consultation.tensionArterielle ?? '-' }}</div>
+                            </div>
+
+                            <div class="mb-2">
+                                <div class="text-muted small">Diagnostic (texte)</div>
+                                <div>{{ consultation.diagnostic ?? '-' }}</div>
+                            </div>
+
+                            <div>
+                                <div class="text-muted small">Diagnostic CIM10 (optionnel)</div>
+                                <div>
+                                    {% if consultation.cim10 is defined and consultation.cim10 %}
+                                        {{ consultation.cim10 }}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header fw-semibold">Conduite à tenir</div>
+                        <div class="card-body">
+                            {{ consultation.conduiteATenir ?? '-' }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="text-muted small">
+                        Créée : {{ consultation.createdAt ? consultation.createdAt|date('Y-m-d H:i') : '-' }}
+                        — Modifiée : {{ consultation.modifiedAt ? consultation.modifiedAt|date('Y-m-d H:i') : '-' }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {# ========== PRESCRIPTIONS ========== #}
+        <div class="tab-pane fade" id="pane-prescriptions" role="tabpanel">
+            {% if consultation.prescriptions is defined and consultation.prescriptions|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Date</th>
+                            <th>Commentaire</th>
+                            <th class="text-end">Lignes</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for p in consultation.prescriptions %}
+                            <tr>
+                                <td>{{ p.id }}</td>
+                                <td>{{ p.datePrescription ? p.datePrescription|date('Y-m-d H:i') : '-' }}</td>
+                                <td>{{ p.commentaire ?? '-' }}</td>
+                                <td class="text-end">
+                                    {{ p.lignes is defined ? p.lignes|length : 0 }}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">Aucune prescription pour le moment.</div>
+            {% endif %}
+        </div>
+
+        {# ========== EXAMENS ========== #}
+        <div class="tab-pane fade" id="pane-examens" role="tabpanel">
+            {% if consultation.examensDemandes is defined and consultation.examensDemandes|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Libellé</th>
+                            <th>Urgence</th>
+                            <th>Statut</th>
+                            <th>Note</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for e in consultation.examensDemandes %}
+                            <tr>
+                                <td>{{ e.id }}</td>
+                                <td>{{ e.libelle ?? '-' }}</td>
+                                <td>
+                                    {% if e.urgence %}
+                                        <span class="badge bg-danger">Urgent</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary">Non</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ e.statut.name ?? e.statut.value ?? '-' }}
+                                </td>
+                                <td>{{ e.note ?? '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">Aucun examen demandé pour le moment.</div>
+            {% endif %}
+        </div>
+
+        {# ========== ACTES ========== #}
+        <div class="tab-pane fade" id="pane-actes" role="tabpanel">
+            {% if consultation.actesRealises is defined and consultation.actesRealises|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table align-middle">
+                        <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Libellé</th>
+                            <th>Quantité</th>
+                            <th>PU</th>
+                            <th>Note</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {% for a in consultation.actesRealises %}
+                            <tr>
+                                <td>{{ a.id }}</td>
+                                <td>{{ a.libelle ?? '-' }}</td>
+                                <td>{{ a.quantite ?? 1 }}</td>
+                                <td>{{ a.prixUnitaire ?? '-' }}</td>
+                                <td>{{ a.note ?? '-' }}</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-muted">Aucun acte réalisé pour le moment.</div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
 {% endblock %}
