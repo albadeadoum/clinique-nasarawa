@@ -1,50 +1,195 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Facture{% endblock %}
+{% block title %}Facture #{{ facture.id }}{% endblock %}
 
 {% block body %}
-    <h1>Facture</h1>
+<style>
+  .fx-wrap{ max-width: 1100px; margin: 0 auto; }
+  .fx-card{
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 16px;
+  }
+  .fx-card .card-header{
+    background:#fff;
+    border-bottom:1px solid rgba(0,0,0,.06);
+    border-top-left-radius:16px;
+    border-top-right-radius:16px;
+  }
+  .fx-kv{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px 16px;
+  }
+  @media (max-width: 768px){ .fx-kv{ grid-template-columns: 1fr; } }
 
-    <table class="table">
-        <tbody>
-            <tr>
-                <th>Id</th>
-                <td>{{ facture.id }}</td>
-            </tr>
-            <tr>
-                <th>Montant</th>
-                <td>{{ facture.montant }}</td>
-            </tr>
-            <tr>
-                <th>DateEmission</th>
-                <td>{{ facture.dateEmission ? facture.dateEmission|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-            <tr>
-                <th>DatePaiement</th>
-                <td>{{ facture.datePaiement ? facture.datePaiement|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-            <tr>
-                <th>StatutPaiement</th>
-                <td>{{ facture.statutPaiement }}</td>
-            </tr>
-            <tr>
-                <th>ModePaiement</th>
-                <td>{{ facture.modePaiement }}</td>
-            </tr>
-            <tr>
-                <th>CreatedAt</th>
-                <td>{{ facture.createdAt ? facture.createdAt|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-            <tr>
-                <th>ModifiedAt</th>
-                <td>{{ facture.modifiedAt ? facture.modifiedAt|date('Y-m-d H:i:s') : '' }}</td>
-            </tr>
-        </tbody>
-    </table>
+  .fx-field{
+    border: 1px solid rgba(0,0,0,.06);
+    border-radius: 14px;
+    padding: 12px;
+    background:#fff;
+  }
+  .fx-label{
+    font-size: 12px;
+    color:#6b7280;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+  }
+  .fx-value{
+    font-size: 14px;
+    font-weight: 650;
+    color:#111827;
+    line-height: 1.35;
+    word-break: break-word;
+  }
 
-    <a href="{{ path('app_facture_index') }}">back to list</a>
+  .badge-soft{
+    border: 1px solid rgba(0,0,0,.10);
+    padding: .45rem .65rem;
+    border-radius: 999px;
+    font-weight: 900;
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+  }
+  .dot{ width: 8px; height: 8px; border-radius: 999px; background:#9ca3af; }
+  .is-ok{ background:#ecfdf5; color:#065f46; border-color:#a7f3d0; }
+  .is-ok .dot{ background:#10b981; }
+  .is-warn{ background:#fffbeb; color:#92400e; border-color:#fde68a; }
+  .is-warn .dot{ background:#f59e0b; }
+  .is-bad{ background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+  .is-bad .dot{ background:#ef4444; }
 
-    <a href="{{ path('app_facture_edit', {'id': facture.id}) }}">edit</a>
+  @media print{
+    .no-print{ display:none !important; }
+    body{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .fx-card{ box-shadow:none !important; }
+  }
+</style>
 
-    {{ include('facture/_delete_form.html.twig') }}
+{# ===== Helpers enum/string ===== #}
+{% set statut = facture.statutPaiement ? (facture.statutPaiement.value ?? facture.statutPaiement.name ?? facture.statutPaiement) : '—' %}
+{% set mode   = facture.modePaiement ? (facture.modePaiement.value ?? facture.modePaiement.name ?? facture.modePaiement) : '—' %}
+
+{% set statutClass =
+  statut in ['PAYE','PAYEE','PAID'] ? 'badge-soft is-ok' :
+  (statut in ['EN_ATTENTE','EN_ATTENTE_PAIEMENT','PENDING'] ? 'badge-soft is-warn' :
+  (statut in ['ANNULE','ANNULEE','CANCELED'] ? 'badge-soft is-bad' :
+  'badge-soft bg-light text-muted'))
+%}
+
+<div class="fx-wrap">
+  <div class="card fx-card shadow-sm border-0">
+    <div class="card-header py-3">
+      <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+        <div>
+          <h5 class="mb-0 fw-semibold">
+            <i class="fa fa-file-invoice-dollar me-2 text-primary"></i>
+            Facture #{{ facture.id }}
+          </h5>
+          <div class="text-muted small">Détails de la facture et suivi du paiement</div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center no-print">
+          <span class="{{ statutClass }}">
+            <span class="dot"></span> {{ statut }}
+          </span>
+
+          <a href="{{ path('app_facture_index') }}" class="btn btn-light border">
+            <i class="fa fa-arrow-left me-1"></i> Retour
+          </a>
+
+          <a href="{{ path('app_facture_edit', {'id': facture.id}) }}" class="btn btn-outline-primary">
+            <i class="fa fa-pen me-1"></i> Modifier
+          </a>
+
+          <button type="button" class="btn btn-primary" onclick="window.print()">
+            <i class="fa fa-print me-1"></i> Imprimer
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-body">
+      <div class="fx-kv">
+        <div class="fx-field">
+          <div class="fx-label">Montant</div>
+          <div class="fx-value">{{ facture.montant ?? '—' }}</div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Statut de paiement</div>
+          <div class="fx-value">
+            <span class="{{ statutClass }}"><span class="dot"></span> {{ statut }}</span>
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Date d’émission</div>
+          <div class="fx-value">
+            {{ facture.dateEmission ? facture.dateEmission|date('d/m/Y H:i') : '—' }}
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Date de paiement</div>
+          <div class="fx-value">
+            {{ facture.datePaiement ? facture.datePaiement|date('d/m/Y H:i') : 'Non payé' }}
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Mode de paiement</div>
+          <div class="fx-value">
+            {% if mode != '—' %}
+              <span class="badge bg-primary-subtle text-primary border">
+                <i class="fa fa-credit-card me-1"></i> {{ mode }}
+              </span>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Consultation</div>
+          <div class="fx-value">
+            {% if facture.consultation is defined and facture.consultation %}
+              #{{ facture.consultation.id }}
+            {% else %}
+              —
+            {% endif %}
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Créé le</div>
+          <div class="fx-value">
+            {{ facture.createdAt ? facture.createdAt|date('d/m/Y H:i') : '—' }}
+          </div>
+        </div>
+
+        <div class="fx-field">
+          <div class="fx-label">Modifié le</div>
+          <div class="fx-value">
+            {{ facture.modifiedAt ? facture.modifiedAt|date('d/m/Y H:i') : '—' }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card-footer bg-white border-0 pt-0">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div class="text-muted small">
+          Référence : <span class="badge bg-light text-dark border">#{{ facture.id }}</span>
+        </div>
+
+        <div class="no-print">
+          {{ include('facture/_delete_form.html.twig') }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
