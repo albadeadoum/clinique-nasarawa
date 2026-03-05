@@ -3,10 +3,11 @@
 namespace App\Controller;
 
 use App\Entity\Consultation;
-use App\Entity\Utilisateur;
+use  App\Entity\Utilisateur;
 use App\Enum\StatutConsultation;
 use App\Form\ConsultationType;
 use App\Repository\ConsultationRepository;
+use App\Service\BillingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Form\FormError;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
@@ -123,61 +124,75 @@ final class ConsultationController extends AbstractController
         ]);
     } 
 
-    //     #[Route('', name: 'app_consultation_index', methods: ['GET'])]
-    // public function index(ConsultationRepository $repo): Response
-    // {
-    //     return $this->render('consultation/index.html.twig', [
-    //         'consultations' => $repo->findAll(),
-    //     ]);
-    // }
-
-    // #[Route('/{id}', name: 'app_consultation_show', methods: ['GET'])]
-    // public function show(Consultation $consultation): Response
-    // {
-    //     return $this->render('consultation/show.html.twig', [
-    //         'consultation' => $consultation,
-    //     ]);
-    // }
-
-    // #[Route('/{id}/medical', name: 'app_consultation_medical_edit', methods: ['GET', 'POST'])]
-    // public function editMedical(
-    //     Request $request,
-    //     Consultation $consultation,
-    //     EntityManagerInterface $em
-    // ): Response {
-    //     // Guard statut : pas modifiable si clôturée/annulée
-    //     if (\in_array($consultation->getStatut(), [StatutConsultation::CLOTURE, StatutConsultation::ANNULE], true)) {
-    //         $this->addFlash('warning', 'Consultation clôturée/annulée : modification interdite.');
-    //         return $this->redirectToRoute('app_consultation_show', ['id' => $consultation->getId()]);
-    //     }
-
-    //     // IMPORTANT : Form dédié Phase C (à créer)
-    //     $form = $this->createForm(ConsultationType::class, $consultation, [
-    //         'context' => 'medical',
-    //     ]);
-    //     $form->handleRequest($request);
-
-    //     if ($form->isSubmitted() && $form->isValid()) {
-    //         $em->flush();
-    //         $this->addFlash('success', 'Données médicales enregistrées.');
-    //         return $this->redirectToRoute('app_consultation_show', ['id' => $consultation->getId()]);
-    //     }
-
-    //     return $this->render('consultation/medical_edit.html.twig', [
-    //         'consultation' => $consultation,
-    //         'form' => $form->createView(),
-    //     ]);
-    // }
 
 
-    // #[Route('/{id}', name: 'app_consultation_delete', methods: ['POST'])]
-    // public function delete(Request $request, Consultation $consultation, EntityManagerInterface $entityManager): Response
-    // {
-    //     if ($this->isCsrfTokenValid('delete'.$consultation->getId(), $request->getPayload()->getString('_token'))) {
-    //         $entityManager->remove($consultation);
-    //         $entityManager->flush();
-    //     }
+    #[Route('/{id}/medical', name: 'app_consultation_medical_edit', methods: ['GET', 'POST'])]
+    public function editMedical(
+        Request $request,
+        Consultation $consultation,
+        EntityManagerInterface $em
+    ): Response {
+        // Guard statut : pas modifiable si clôturée/annulée
+        if (\in_array($consultation->getStatut(), [StatutConsultation::CLOTURE, StatutConsultation::ANNULE], true)) {
+            $this->addFlash('warning', 'Consultation clôturée/annulée : modification interdite.');
+            return $this->redirectToRoute('app_consultation_show', ['id' => $consultation->getId()]);
+        }
 
-    //     return $this->redirectToRoute('app_consultation_index', [], Response::HTTP_SEE_OTHER);
-    // }
+        // IMPORTANT : Form dédié Phase C (à créer)
+        $form = $this->createForm(ConsultationType::class, $consultation, [
+            'context' => 'medical',
+        ]);
+        $form->handleRequest($request);
+
+        if ($form->isSubmitted() && $form->isValid()) {
+            $em->flush();
+            $this->addFlash('success', 'Données médicales enregistrées.');
+            return $this->redirectToRoute('app_consultation_show', ['id' => $consultation->getId()]);
+        }
+
+        return $this->render('consultation/medical_edit.html.twig', [
+            'consultation' => $consultation,
+            'form' => $form->createView(),
+        ]);
+    }
+
+
+    #[Route('/{id}', name: 'app_consultation_delete', methods: ['POST'])]
+    public function delete(Request $request, Consultation $consultation, EntityManagerInterface $entityManager): Response
+    {
+        if ($this->isCsrfTokenValid('delete'.$consultation->getId(), $request->getPayload()->getString('_token'))) {
+            $entityManager->remove($consultation);
+            $entityManager->flush();
+        }
+
+        return $this->redirectToRoute('app_consultation_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/consultation/{id}/facture', name: 'app_consultation_facture', methods: ['GET', 'POST'])]
+    public function facture(Consultation $consultation, Request $request, BillingService $billing, EntityManagerInterface $em): Response
+    {
+        if ($request->isMethod('POST')) {
+            $forfait = (float) ($request->request->get('forfait', 0));
+            $facture = $billing->generateDraftInvoice($consultation, $forfait);
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'html' => $this->renderView('facture/_modal_facture.html.twig', [
+                    'consultation' => $consultation,
+                    'facture' => $facture,
+                ]),
+            ]);
+        }
+
+        // GET
+        $facture = $billing->generateDraftInvoice($consultation, 0);
+        $em->flush();
+
+        return $this->render('facture/_modal_facture.html.twig', [
+            'consultation' => $consultation,
+            'facture' => $facture,
+        ]);
+    }
+
 }

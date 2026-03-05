@@ -2,6 +2,7 @@
 
 namespace App\Controller;
 
+use App\Entity\Consultation;
 use App\Entity\Prescription;
 use App\Form\PrescriptionType;
 use App\Repository\PrescriptionRepository;
@@ -77,5 +78,56 @@ final class PrescriptionController extends AbstractController
         }
 
         return $this->redirectToRoute('app_prescription_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+    #[Route('/consultation/{id}/prescription/modal', name: 'app_consultation_prescription_modal', methods: ['GET', 'POST'])]
+    public function modal(
+        Consultation $consultation,
+        Request $request,
+        EntityManagerInterface $em
+    ): Response {
+        // Règle: on édite la dernière prescription, sinon on en crée une
+        $prescription = $consultation->getPrescriptions()->last() ?: null;
+
+        if (!$prescription) {
+            $prescription = new Prescription();
+            $prescription->setConsultation($consultation);
+            $em->persist($prescription);
+        }
+
+        $form = $this->createForm(PrescriptionType::class, $prescription, [
+            'action' => $this->generateUrl('app_consultation_prescription_modal', ['id' => $consultation->getId()]),
+        ]);
+        $form->handleRequest($request);
+
+        if ($request->isMethod('POST')) {
+            if ($form->isSubmitted() && $form->isValid()) {
+                $em->flush();
+
+                return $this->json([
+                    'success' => true,
+                    'summaryHtml' => $this->renderView('prescription/_summary.html.twig', [
+                        'consultation' => $consultation,
+                    ]),
+                ]);
+            }
+
+            // erreurs -> renvoyer le contenu HTML du formulaire
+            return $this->json([
+                'success' => false,
+                'html' => $this->renderView('prescription/_modal_form.html.twig', [
+                    'consultation' => $consultation,
+                    'form' => $form->createView(),
+                    'prescription' => $prescription,
+                ]),
+            ], 422);
+        }
+
+        // GET : afficher le modal
+        return $this->render('prescription/_modal_form.html.twig', [
+            'consultation' => $consultation,
+            'form' => $form->createView(),
+            'prescription' => $prescription,
+        ]);
     }
 }

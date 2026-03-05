@@ -1,0 +1,114 @@
+<div class="modal-header bg-light">
+  <div>
+    <h5 class="modal-title mb-0">Facture</h5>
+    <small class="text-muted">
+      Consultation #{{ consultation.id }}
+      — Émise le {{ facture.dateEmission|date('d/m/Y H:i') }}
+    </small>
+  </div>
+
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  <div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+      <span class="badge {{ facture.statutPaiement.value == 'PAYE' ? 'bg-success' : 'bg-warning text-dark' }}">
+        {{ facture.statutPaiement.value }}
+      </span>
+      {% if facture.modePaiement %}
+        <span class="badge bg-secondary ms-2">{{ facture.modePaiement.value }}</span>
+      {% endif %}
+    </div>
+
+    <div class="text-end">
+      <div class="text-muted small">Total</div>
+      <div class="fs-4 fw-semibold">{{ facture.montant|number_format(0, '.', ' ') }} FCFA</div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-sm align-middle">
+      <thead class="table-light">
+        <tr>
+          <th>Type</th>
+          <th>Libellé</th>
+          <th class="text-end">Qté</th>
+          <th class="text-end">PU</th>
+          <th class="text-end">Total</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for l in facture.lignes %}
+        <tr>
+          <td><span class="badge bg-light text-dark border">{{ l.type }}</span></td>
+          <td class="fw-medium">{{ l.libelle }}</td>
+          <td class="text-end">{{ l.quantite }}</td>
+          <td class="text-end">{{ l.prixUnitaire|number_format(0, '.', ' ') }}</td>
+          <td class="text-end fw-semibold">{{ l.total|number_format(0, '.', ' ') }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="text-center text-muted py-4">
+            Aucune ligne (renseigne les prix des actes / examens).
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% set labels = {
+  'especes': 'Espèces',
+  'carte': 'Carte',
+  'mobile_money': 'Mobile Money',
+  'virement': 'Virement'
+} %}
+{% set labels = {
+  'especes': 'Espèces',
+  'carte': 'Carte',
+  'mobile_money': 'Mobile Money',
+  'virement': 'Virement'
+} %}
+
+{% if facture.modePaiement is not null %}
+  {{ labels[facture.modePaiement.value] ?? facture.modePaiement.value }}
+{% else %}
+  <span class="text-muted">—</span>
+{% endif %}
+
+  {% if facture.datePaiement %}
+    <div class="alert alert-success d-flex justify-content-between align-items-center">
+      <div>
+        <strong>Payée</strong> le {{ facture.datePaiement|date('d/m/Y H:i') }}
+      </div>
+    </div>
+  {% endif %}
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+
+  {% if facture.statutPaiement.value != 'PAYE' %}
+    <div class="d-flex gap-2 align-items-center">
+      <select class="form-select form-select-sm" id="modePaiementSelect" style="min-width: 180px;">
+        <option value="">Mode de paiement...</option>
+        {% for m in enum('App\\Enum\\ModePaiement').cases %}
+          <option value="{{ m.value }}">{{ m.value }}</option>
+        {% endfor %}
+      </select>
+
+     {% set total = facture.montant ?? 0 %}
+<button type="button"
+        class="btn btn-success btn-sm js-payer-facture"
+        data-url="{{ path('app_facture_payer', {id: facture.id}) }}"
+        {{ total <= 0 ? 'disabled' : '' }}>
+  <i class="ri-check-line me-1"></i> Encaisser
+</button>
+  {% endif %}
+
+  <a class="btn btn-outline-secondary btn-sm"
+   target="_blank"
+   href="{{ path('app_facture_print', {id: facture.id}) }}">
+  <i class="ri-printer-line me-1"></i> Imprimer
+</a>
+</div>

@@ -1,0 +1,32 @@
+{% set p = consultation.prescriptions|last %}
+
+{% if p %}
+  {% if p.lignes|length > 0 %}
+    <div class="table-responsive">
+      <table class="table table-sm align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th>Médicament</th>
+            <th class="text-end">Qté</th>
+            <th>Posologie</th>
+            <th class="text-end">Durée</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for l in p.lignes %}
+            <tr>
+              <td class="fw-medium">{{ l.libelle }}</td>
+              <td class="text-end">{{ l.quantite }}</td>
+              <td>{{ l.posologie }}</td>
+              <td class="text-end">{{ l.duree ?? '—' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% else %}
+    <div class="text-muted">Aucune ligne de prescription.</div>
+  {% endif %}
+{% else %}
+  <div class="text-muted">Aucune prescription enregistrée.</div>
+{% endif %}

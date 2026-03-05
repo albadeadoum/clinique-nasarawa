@@ -9,7 +9,8 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ExamenDemandeRepository::class)]
 class ExamenDemande
 {
-      #[ORM\Id]
+    use TimestampableTrait;
+    #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
     private ?int $id = null;
@@ -30,6 +31,12 @@ class ExamenDemande
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $note = null;
+
+    #[ORM\Column(type: 'decimal', precision: 10, scale: 2, nullable: true)]
+    private ?string $prixUnitaire = null;
+
+    public function getPrixUnitaire(): ?string { return $this->prixUnitaire; }
+    public function setPrixUnitaire(?string $prixUnitaire): self { $this->prixUnitaire = $prixUnitaire; return $this; }
 
     public function getId(): ?int { return $this->id; }
 

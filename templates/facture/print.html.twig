@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <title>Facture #{{ facture.id }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body { font-family: Arial, sans-serif; color:#111; }
+    .page { max-width: 800px; margin: 0 auto; padding: 24px; }
+    .row { display:flex; justify-content:space-between; gap:16px; }
+    .muted { color:#666; font-size: 12px; }
+    h1 { font-size: 18px; margin:0; }
+    h2 { font-size: 14px; margin: 18px 0 8px; }
+    table { width:100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ddd; padding: 8px; font-size: 13px; }
+    th { background:#f3f4f6; text-align:left; }
+    .right { text-align:right; }
+    .badge { display:inline-block; padding: 4px 8px; border-radius: 12px; font-size: 12px; background:#f3f4f6; border:1px solid #ddd; }
+    .totalBox { margin-top: 12px; display:flex; justify-content:flex-end; }
+    .totalInner { min-width: 260px; border:1px solid #ddd; padding: 10px; }
+    .totalInner div { display:flex; justify-content:space-between; margin: 4px 0; }
+    .strong { font-weight:700; }
+
+    @media print {
+      .no-print { display:none !important; }
+      body { margin:0; }
+      .page { padding: 0; }
+    }
+  </style>
+</head>
+
+<body>
+<div class="page">
+
+  <div class="row">
+    <div>
+      <h1>Facture #{{ facture.id }}</h1>
+      <div class="muted">Émise le {{ facture.dateEmission|date('d/m/Y H:i') }}</div>
+      <div style="margin-top:6px;">
+        <span class="badge">{{ facture.statutPaiement.value }}</span>
+        {% if facture.modePaiement %}
+          <span class="badge">{{ facture.modePaiement.value }}</span>
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="text-align:right;">
+      <div class="strong">Clinique Mainassara</div>
+      <div class="muted">Niamey</div>
+      <div class="muted">Téléphone: ...</div>
+    </div>
+  </div>
+
+  <h2>Patient</h2>
+  <div class="row">
+    <div>
+      <div><span class="muted">Nom:</span> <span class="strong">{{ patient.nom ?? '' }} {{ patient.prenom ?? '' }}</span></div>
+      <div><span class="muted">Dossier:</span> {{ patient.code ?? '—' }}</div>
+    </div>
+    <div style="text-align:right;">
+      <div><span class="muted">Consultation:</span> #{{ consultation.id }}</div>
+      {% if consultation.rendezVous is defined and consultation.rendezVous %}
+        <div><span class="muted">Rendez-vous:</span> #{{ consultation.rendezVous.id }}</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <h2>Détails</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Libellé</th>
+        <th class="right">Qté</th>
+        <th class="right">PU</th>
+        <th class="right">Total</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for l in facture.lignes %}
+        <tr>
+          <td>{{ l.type }}</td>
+          <td>{{ l.libelle }}</td>
+          <td class="right">{{ l.quantite }}</td>
+          <td class="right">{{ l.prixUnitaire|number_format(0, '.', ' ') }}</td>
+          <td class="right">{{ l.total|number_format(0, '.', ' ') }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="5" class="muted">Aucune ligne.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totalBox">
+    <div class="totalInner">
+      <div><span>Total</span><span class="strong">{{ facture.montant|number_format(0, '.', ' ') }} FCFA</span></div>
+      {% if facture.datePaiement %}
+        <div><span>Payée le</span><span>{{ facture.datePaiement|date('d/m/Y H:i') }}</span></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="no-print" style="margin-top:16px; display:flex; justify-content:flex-end; gap:10px;">
+    <button onclick="window.print()">Imprimer</button>
+    <button onclick="window.close()">Fermer</button>
+  </div>
+
+</div>
+
+<script>
+  // Auto print à l’ouverture (optionnel)
+  window.addEventListener('load', () => {
+    window.print();
+  });
+</script>
+</body>
+</html>

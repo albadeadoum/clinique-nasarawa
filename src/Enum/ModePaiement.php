@@ -1,5 +1,4 @@
 <?php
-// src/Domain/Core/Enum/ModePaiement.php
 namespace App\Enum;
 
 enum ModePaiement: string

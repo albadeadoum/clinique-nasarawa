@@ -1,0 +1,40 @@
+<div class="modal-header bg-light">
+  <div>
+    <h5 class="modal-title mb-0">Prescription</h5>
+    <small class="text-muted">Consultation #{{ consultation.id }}</small>
+  </div>
+  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<div class="modal-body">
+  {{ form_start(form, { attr: { id: 'prescriptionForm' } }) }}
+
+  {# ===== Collection lignes ===== #}
+  <div class="d-flex justify-content-between align-items-center mb-2">
+    <h6 class="mb-0">Lignes de prescription</h6>
+    <button type="button" class="btn btn-sm btn-outline-primary js-add-line">
+      <i class="ri-add-line me-1"></i> Ajouter une ligne
+    </button>
+  </div>
+
+  {# Prototype #}
+  <div id="prescriptionLines"
+       data-prototype="{{ form_widget(form.lignes.vars.prototype)|e('html_attr') }}"
+       data-index="{{ form.lignes|length }}">
+    {% for ligneForm in form.lignes %}
+      {% include 'prescription/_ligne_row.html.twig' with { ligneForm: ligneForm } %}
+    {% endfor %}
+  </div>
+
+  {# erreurs globales #}
+  {{ form_errors(form) }}
+
+  {{ form_end(form) }}
+</div>
+
+<div class="modal-footer">
+  <button type="button" class="btn btn-light" data-bs-dismiss="modal">Fermer</button>
+  <button type="submit" form="prescriptionForm" class="btn btn-primary js-submit-prescription">
+    <i class="ri-save-line me-1"></i> Enregistrer
+  </button>
+</div>

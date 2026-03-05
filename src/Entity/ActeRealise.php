@@ -8,6 +8,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity(repositoryClass: ActeRealiseRepository::class)]
 class ActeRealise
 {
+    use TimestampableTrait;
      #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]

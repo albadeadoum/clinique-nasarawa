@@ -39,3 +39,63 @@
 
     <a href="{{ path('app_prescription_new') }}">Create new</a>
 {% endblock %}
+
+{% block javascripts %}
+  {{ parent() }}
+    <script>
+document.addEventListener('click', async (e) => {
+  // Ouvrir modal Prescription
+  const openBtn = e.target.closest('.js-open-prescription');
+  if (openBtn) {
+    const url = openBtn.dataset.url;
+    const modalEl = document.querySelector('#prescriptionModal');
+    const content = modalEl.querySelector('.modal-content');
+
+    content.innerHTML = `<div class="modal-body p-4 text-center text-muted">Chargement...</div>`;
+    const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    content.innerHTML = await res.text();
+    return;
+  }
+});
+
+document.addEventListener('submit', async (e) => {
+  const form = e.target.closest('#prescriptionForm');
+  if (!form) return;
+
+  e.preventDefault();
+
+  const modalEl = document.querySelector('#prescriptionModal');
+  const content = modalEl.querySelector('.modal-content');
+  const btn = content.querySelector('.js-submit-prescription');
+  if (btn) btn.disabled = true;
+
+  const res = await fetch(form.action, {
+    method: 'POST',
+    body: new FormData(form),
+    headers: { 'X-Requested-With': 'XMLHttpRequest' }
+  });
+
+  // Succès => refresh résumé + fermer modal
+  if (res.ok) {
+    const data = await res.json();
+    if (data.success) {
+      const summary = document.querySelector('#prescriptionSummary');
+      if (summary && data.summaryHtml) summary.innerHTML = data.summaryHtml;
+
+      const bsModal = bootstrap.Modal.getInstance(modalEl);
+      bsModal?.hide();
+      return;
+    }
+  }
+
+  // Erreurs => re-render du form dans modal
+  const data = await res.json().catch(() => null);
+  if (data?.html) {
+    content.innerHTML = data.html;
+  } else {
+    alert("Erreur lors de l'enregistrement de la prescription.");
+  }
+});
+</script>
+
+{% endblock %}

@@ -13,15 +13,11 @@ class PrescriptionLigneType extends AbstractType
 {
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
-        $builder
+         $builder
+            ->add('libelle')          // option A
             ->add('quantite')
             ->add('posologie')
-            ->add('duree')
-            ->add('prescription', EntityType::class, [
-                'class' => Prescription::class,
-                'choice_label' => 'id',
-            ])
-        ;
+            ->add('duree', null, ['required' => false]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

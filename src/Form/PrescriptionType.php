@@ -6,21 +6,22 @@ use App\Entity\Consultation;
 use App\Entity\Prescription;
 use Symfony\Bridge\Doctrine\Form\Type\EntityType;
 use Symfony\Component\Form\AbstractType;
+use Symfony\Component\Form\Extension\Core\Type\CollectionType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 
 class PrescriptionType extends AbstractType
 {
-    public function buildForm(FormBuilderInterface $builder, array $options): void
+     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-            ->add('typePrescription')
-            ->add('instructions')
-            ->add('consultation', EntityType::class, [
-                'class' => Consultation::class,
-                'choice_label' => 'id',
-            ])
-        ;
+            ->add('lignes', CollectionType::class, [
+                'entry_type' => PrescriptionLigneType::class,
+                'allow_add' => true,
+                'allow_delete' => true,
+                'by_reference' => false,
+                'prototype' => true,
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

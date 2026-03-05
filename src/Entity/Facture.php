@@ -5,7 +5,10 @@ namespace App\Entity;
 use App\Enum\ModePaiement;
 use App\Enum\StatutPaiement;
 use App\Repository\FactureRepository;
+
 use Doctrine\ORM\Mapping as ORM;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
 
 #[ORM\Entity(repositoryClass: FactureRepository::class)]
 #[ORM\HasLifecycleCallbacks]
@@ -33,8 +36,43 @@ class Facture
     #[ORM\Column(enumType: StatutPaiement::class)]
     private StatutPaiement $statutPaiement = StatutPaiement::EN_ATTENTE;
 
-    #[ORM\Column(enumType: ModePaiement::class, nullable: true)]
+    #[ORM\Column(type: 'string', enumType: ModePaiement::class, nullable: true)]
     private ?ModePaiement $modePaiement = null;
+
+    #[ORM\OneToMany(mappedBy: 'facture', targetEntity: FactureLigne::class, cascade: ['persist', 'remove'], orphanRemoval: true)]
+    private Collection $lignes;
+
+    public function __construct()
+    {
+        $this->lignes = new ArrayCollection();
+        $this->dateEmission = new \DateTimeImmutable();
+    }
+
+    /** @return Collection<int, FactureLigne> */
+    public function getLignes(): Collection { return $this->lignes; }
+
+    public function addLigne(FactureLigne $ligne): self
+    {
+        if (!$this->lignes->contains($ligne)) {
+            $this->lignes->add($ligne);
+            $ligne->setFacture($this);
+        }
+        return $this;
+    }
+
+    public function clearLignes(): void
+    {
+        $this->lignes->clear(); // orphanRemoval => suppression DB après flush
+    }
+
+    public function recalcMontant(): void
+    {
+        $sum = 0.0;
+        foreach ($this->lignes as $l) {
+            $sum += (float) $l->getTotal();
+        }
+        $this->montant = $sum; // float chez toi (ok pour l’instant)
+    }
     
     public function getId(): ?int
     {

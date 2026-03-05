@@ -2,9 +2,12 @@
 
 namespace App\Controller;
 
+use App\Entity\Consultation;
 use App\Entity\Facture;
+use App\Enum\ModePaiement;
 use App\Form\FactureType;
 use App\Repository\FactureRepository;
+use App\Service\BillingService;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
@@ -77,5 +80,53 @@ final class FactureController extends AbstractController
         }
 
         return $this->redirectToRoute('app_facture_index', [], Response::HTTP_SEE_OTHER);
+    }
+
+
+
+    #[Route('/consultation/{id}/facture/modal', name: 'app_consultation_facture_modal', methods: ['GET'])]
+    public function factureModal(
+        Consultation $consultation,
+        BillingService $billing,
+        EntityManagerInterface $em
+    ): Response {
+        // Forfait consultation (à remplacer plus tard par un tarif)
+        $forfait = 0; // ex: 5000
+
+        $facture = $billing->generateDraftInvoice($consultation, $forfait);
+        $em->flush();
+
+        return $this->render('facture/_modal_facture.html.twig', [
+            'consultation' => $consultation,
+            'facture' => $facture,
+        ]);
+    }
+
+    #[Route('/facture/{id}/payer', name: 'app_facture_payer', methods: ['POST'])]
+    public function payer(
+        Facture $facture,
+        Request $request,
+        BillingService $billing,
+        EntityManagerInterface $em
+    ): Response {
+        $modeRaw = (string) $request->request->get('modePaiement', '');
+        if ($modeRaw === '' || !ModePaiement::tryFrom($modeRaw)) {
+            return $this->json(['success' => false, 'message' => 'Mode de paiement invalide.'], 422);
+        }
+
+        $billing->payInvoice($facture, ModePaiement::from($modeRaw));
+        $em->flush();
+
+        return $this->json(['success' => true]);
+    }
+
+    #[Route('/facture/{id}/print', name: 'app_facture_print', methods: ['GET'])]
+    public function print(Facture $facture): Response
+    {
+        return $this->render('facture/print.html.twig', [
+            'facture' => $facture,
+            'consultation' => $facture->getConsultation(),
+            'patient' => $facture->getConsultation()->getRendezVous()->getPatient(), // adapte si besoin
+        ]);
     }
 }

@@ -24,7 +24,7 @@ class Prescription
     private Consultation $consultation;
 
     #[ORM\Column(length: 100)]
-    private string $typePrescription;
+    private string $typePrescription = 'standard';
 
     #[ORM\Column(type: 'text', nullable: true)]
     private ?string $instructions = null;
@@ -90,23 +90,22 @@ class Prescription
         return $this->lignes;
     }
 
-    public function addLigne(PrescriptionLigne $ligne): self
+   public function addLigne(PrescriptionLigne $ligne): self
     {
         if (!$this->lignes->contains($ligne)) {
             $this->lignes->add($ligne);
-            $ligne->setPrescription($this);
+            $ligne->setPrescription($this); // ✅ indispensable (JoinColumn nullable=false)
         }
-
         return $this;
     }
 
     public function removeLigne(PrescriptionLigne $ligne): self
     {
-        if ($this->lignes->removeElement($ligne)) {
-            if ($ligne->getPrescription() === $this) {
-                $ligne->setPrescription(null);
-            }
-        }
+        // IMPORTANT: orphanRemoval=true => Doctrine va DELETE la ligne
+        $this->lignes->removeElement($ligne);
+
+        // ✅ avec JoinColumn(nullable=false), évite de faire setPrescription(null)
+        // sinon Doctrine peut tenter un UPDATE à NULL avant DELETE selon le contexte.
 
         return $this;
     }
