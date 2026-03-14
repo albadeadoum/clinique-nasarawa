@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Résultat laboratoire</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 13px;
+            color: #000;
+            margin: 20px;
+        }
+
+        .clinic-header {
+            text-align: center;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+
+        .clinic-header h2 {
+            margin: 0;
+            font-size: 20px;
+            text-transform: uppercase;
+        }
+
+        .patient-box {
+            margin-bottom: 20px;
+            line-height: 1.8;
+        }
+
+        .title {
+            text-align: center;
+            font-weight: bold;
+            margin: 15px 0;
+            font-size: 16px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        th {
+            background: #f3f3f3;
+            text-align: left;
+        }
+
+        .footer {
+            margin-top: 40px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .signature {
+            width: 200px;
+            text-align: center;
+        }
+
+        .print-actions {
+            margin-bottom: 20px;
+        }
+
+        @media print {
+            .print-actions {
+                display: none;
+            }
+
+            body {
+                margin: 0;
+            }
+
+            @page {
+                size: A4;
+                margin: 12mm;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set consultation = prestation.consultation %}
+    {% set rdv = consultation ? consultation.rendezVous|default(null) : null %}
+    {% set patient = rdv ? rdv.patient|default(null) : null %}
+
+    <div class="print-actions">
+        <button onclick="window.print()">Imprimer</button>
+        <button onclick="window.close()">Fermer</button>
+    </div>
+
+    <div class="clinic-header">
+        <h2>CLINIQUE MEDICALE NASSARAWA</h2>
+        <div>NIF : 120402/R &nbsp;&nbsp; NE-NIM-01-2024-B12-00145</div>
+        <div>Yantala Haut Avenue du Daoura YN 187</div>
+        <div>TEL: 00227 20 75 51 02 / 88 05 22 20</div>
+        <div>BP: 2120 Niamey</div>
+        <div>Email: nassrawaclinique@gmail.com</div>
+    </div>
+
+    <div class="title">Examens laboratoire</div>
+
+    <div class="patient-box">
+        <div>
+            <strong>Nom Prénom :</strong>
+            {% if patient %}
+                {{ patient.nomComplet|default((patient.nom|default('') ~ ' ' ~ patient.prenom|default(''))|trim) }}
+            {% else %}
+                -
+            {% endif %}
+        </div>
+        <div>
+            <strong>Age :</strong>
+            {{ patient and attribute(patient, 'age') is defined ? patient.age ~ ' ans' : '-' }}
+            &nbsp;&nbsp;
+            <strong>Sexe :</strong>
+            {{ patient and attribute(patient, 'sexe') is defined ? patient.sexe : '-' }}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>DEMANDES</th>
+                <th>RESULTATS</th>
+                <th>VALEURS NORMALES</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% if resultat.lignes|length > 0 %}
+            {% for ligne in resultat.lignes|sort((a, b) => a.ordre <=> b.ordre) %}
+                <tr>
+                    <td>{{ ligne.demande|nl2br }}</td>
+                    <td>{{ ligne.resultat ? ligne.resultat|nl2br : '-' }}</td>
+                    <td>{{ ligne.valeurNormale ? ligne.valeurNormale|nl2br : '-' }}</td>
+                </tr>
+            {% endfor %}
+        {% else %}
+            <tr>
+                <td>{{ prestation.tarifPrestation.libelle }}</td>
+                <td>{{ resultat.resultat ? resultat.resultat|nl2br : '-' }}</td>
+                <td>-</td>
+            </tr>
+        {% endif %}
+        </tbody>
+    </table>
+
+    {% if resultat.conclusion %}
+        <div style="margin-top: 20px;">
+            <strong>Conclusion :</strong><br>
+            {{ resultat.conclusion|nl2br }}
+        </div>
+    {% endif %}
+
+    <div class="footer">
+        <div>
+            <strong>Date :</strong>
+            {{ resultat.dateValidation ? resultat.dateValidation|date('d/m/Y') : "now"|date('d/m/Y') }}
+        </div>
+
+        <div class="signature">
+            <div>Signature</div>
+            <br><br><br>
+            <div>__________________</div>
+        </div>
+    </div>
+
+    <script>
+        window.addEventListener('load', function () {
+            setTimeout(() => window.print(), 300);
+        });
+    </script>
+</body>
+</html>
