@@ -307,4 +307,13 @@ class Consultation
         $this->statut = $statut;
         return $this;
     }
+
+    public function getNumeroFiche(): string
+    {
+        return sprintf(
+            'FC-%s-%04d',
+            $this->getCreatedAt()?->format('Ymd') ?? date('Ymd'),
+            $this->getId() ?? 0
+        );
+    }
 }

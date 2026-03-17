@@ -94,9 +94,13 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <a class="btn btn-sm btn-outline-secondary rounded-pill px-3" href="#">
+                                        <a class="btn btn-sm btn-outline-secondary rounded-pill px-3 me-1" href="{{ path('app_pharmacie_vente_print', {'id': v.id}) }}" target="_blank">
                                             <i class="ri-eye-line me-1"></i>
                                             Voir
+                                        </a>
+                                        <a class="btn btn-sm btn-primary rounded-pill px-3" href="{{ path('app_pharmacie_vente_pdf', {'id': v.id}) }}" target="_blank">
+                                            <i class="ri-printer-line me-1"></i>
+                                            Imprimer
                                         </a>
                                     </td>
                                 </tr>

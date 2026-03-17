@@ -14,6 +14,13 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use setasign\Fpdi\Fpdi;
+use Endroid\QrCode\Encoding\Encoding;
 
 #[Route('/rendez/vous')]
 final class RendezVousController extends AbstractController
@@ -132,8 +139,95 @@ public function startConsultation(
     #[Route('/{id}/print', name: 'app_rendez_vous_print', methods: ['GET'])]
     public function print(RendezVous $rendezVous): Response
     {
+        $showUrl = $this->generateUrl('app_rendez_vous_show', ['id' => $rendezVous->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode(
+            data: $showUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 200,
+            margin: 6
+        );
+
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'RV-' . $rendezVous->getId();
+
         return $this->render('rendez_vous/print.html.twig', [
             'rendez_vous' => $rendezVous,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $showUrl,
+        ]);
+    }
+
+    #[Route('/{id}/print/pdf', name: 'app_rendez_vous_print_pdf', methods: ['GET'])]
+    public function printPdf(RendezVous $rendezVous): Response
+    {
+        $showUrl = $this->generateUrl('app_rendez_vous_show', ['id' => $rendezVous->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+         $qrCode = new QrCode(
+            data: $showUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 200,
+            margin: 6
+        );
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'RV-' . $rendezVous->getId();
+
+        $html = $this->renderView('rendez_vous/print.html.twig', [
+            'rendez_vous' => $rendezVous,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $showUrl,
+        ]);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        $extraPath = $this->getParameter('kernel.project_dir') . '/public/pdf/ANNEXE_RDV_VERSO.pdf';
+        if (file_exists($extraPath)) {
+            $temp = sys_get_temp_dir() . '/rendez_vous_' . $rendezVous->getId() . '.pdf';
+            file_put_contents($temp, $pdfOutput);
+
+            $fpdi = new Fpdi();
+            $count1 = $fpdi->setSourceFile($temp);
+            for ($p = 1; $p <= $count1; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $count2 = $fpdi->setSourceFile($extraPath);
+            for ($p = 1; $p <= $count2; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $merged = $fpdi->Output('S');
+
+            return new Response($merged, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('inline; filename="rendez_vous-%d.pdf"', $rendezVous->getId()),
+            ]);
+        }
+
+        return new Response($pdfOutput, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('inline; filename="rendez_vous-%d.pdf"', $rendezVous->getId()),
         ]);
     }
 }

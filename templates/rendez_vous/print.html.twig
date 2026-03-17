@@ -225,7 +225,7 @@
 {% set patientNom = (rendez_vous.patient ? (rendez_vous.patient.nom ~ ' ' ~ (rendez_vous.patient.prenom ?? '')) : '—') %}
 {% set medecinNom = (rendez_vous.medecin ? (rendez_vous.medecin.nomComplet ?? (rendez_vous.medecin.nom ~ ' ' ~ (rendez_vous.medecin.prenom ?? ''))) : '—') %}
 {% set dt = (rendez_vous.dateheure ? rendez_vous.dateheure|date('d/m/Y H:i') : '—') %}
-{% set statut = (rendez_vous.statut ? rendez_vous.statut.value : '—') %}
+{% set statut = rendez_vous.statut ? rendez_vous.statut.value : '—' %}
 {% set motif = (rendez_vous.motif ?: '—') %}
 {% set dossier = (rendez_vous.patient and rendez_vous.patient.dossierMedical)
   ? (rendez_vous.patient.dossierMedical.numeroDossier ?? ('#' ~ rendez_vous.patient.dossierMedical.id))
@@ -242,9 +242,9 @@
   {% set badgeClass = badgeClass ~ ' is-bad' %}
 {% endif %}
 
-{# QR: lien vers la page show (absolu si possible) #}
-{% set showUrl = absolute_url(path('app_rendez_vous_show', {'id': rendez_vous.id})) %}
-{% set qrUrl = 'https://chart.googleapis.com/chart?cht=qr&chs=200x200&chld=M|0&chl=' ~ showUrl|url_encode %}
+{# QR: prefer provided data-uri (qr_data) else fallback to google chart URL #}
+{% set showUrl = verifyUrl is defined ? verifyUrl : absolute_url(path('app_rendez_vous_show', {'id': rendez_vous.id})) %}
+{% set _qr = qr_data is defined ? qr_data : ('https://chart.googleapis.com/chart?cht=qr&chs=200x200&chld=M|0&chl=' ~ showUrl|url_encode) %}
 
 <div class="wrap">
   <div class="sheet">
@@ -345,8 +345,11 @@
           <small><b>QR Code</b></small>
           <small>Vérifier le rendez-vous</small>
           <small style="word-break:break-all;">{{ showUrl }}</small>
+          {% if code_qr is defined and code_qr %}
+            <div><small><b>Code :</b> {{ code_qr }}</small></div>
+          {% endif %}
         </div>
-        <img src="{{ qrUrl }}" alt="QR Code">
+        <img src="{{ _qr }}" alt="QR Code">
       </div>
     </div>
 

@@ -85,8 +85,9 @@
                             <td>#{{ facture.consultation.id }}</td>
                             <td>{{ facture.dateEmission ? facture.dateEmission|date('Y-m-d H:i') : '-' }}</td>
                             <td>{{ facture.montantTotal|number_format(0, ',', ' ') }} FCFA</td>
-                            <td>{{ facture.montantPaye|number_format(0, ',', ' ') }} FCFA</td>
-                            <td>{{ facture.resteAPayer|number_format(0, ',', ' ') }} FCFA</td>
+                            
+                            <td>{{ (facture.montantPaye ?? 0)|number_format(0, ',', ' ') }} FCFA</td>
+                            <td>{{ (facture.resteAPayer ?? 0)|number_format(0, ',', ' ') }} FCFA</td>
                             <td>
                                 {% if statut == 'brouillon' %}
                                     <span class="badge bg-secondary">Brouillon</span>

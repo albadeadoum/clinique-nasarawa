@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Fiche de consultation</title>
+    <style>
+        body{
+            font-family: Arial, Helvetica, sans-serif;
+            margin: 30px;
+            color: #000;
+            font-size: 14px;
+        }
+
+        .topbar{
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .clinic{
+            flex: 1;
+        }
+
+        .clinic h1{
+            font-size: 22px;
+            margin: 0 0 5px 0;
+        }
+
+        .clinic .sub{
+            color: #444;
+            line-height: 1.5;
+        }
+
+        .qr-box{
+            width: 150px;
+            text-align: center;
+        }
+
+        .qr-box img{
+            width: 130px;
+            height: 130px;
+        }
+
+        .title{
+            text-align: center;
+            font-size: 22px;
+            font-weight: bold;
+            margin: 10px 0 20px 0;
+            text-transform: uppercase;
+        }
+
+        .meta{
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 30px;
+            margin-bottom: 20px;
+        }
+
+        .section{
+            margin-top: 18px;
+        }
+
+        .section-title{
+            font-weight: bold;
+            background: #f2f2f2;
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            margin-bottom: 8px;
+        }
+
+        .box{
+            border: 1px solid #ccc;
+            padding: 10px;
+        }
+
+        table{
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        table th, table td{
+            border: 1px solid #000;
+            padding: 8px;
+            vertical-align: top;
+        }
+
+        table th{
+            background: #f5f5f5;
+            text-align: left;
+        }
+
+        .signature{
+            margin-top: 50px;
+            display: flex;
+            justify-content: space-between;
+            gap: 40px;
+        }
+
+        .signature-block{
+            width: 45%;
+            text-align: center;
+        }
+
+        .line{
+            margin-top: 60px;
+            border-top: 1px solid #000;
+            padding-top: 6px;
+        }
+
+        .footer-note{
+            margin-top: 25px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .print-actions{
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        @media print{
+            .print-actions{
+                display: none;
+            }
+
+            body{
+                margin: 12mm;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% set patient = consultation.rendezVous.patient ?? null %}
+
+<div class="topbar">
+    <div class="clinic">
+        <h1>CLINIQUE NASARAWA</h1>
+        <div class="sub">
+            Niamey - Niger<br>
+            Tél : +227 XX XX XX XX
+        </div>
+    </div>
+
+    <div class="qr-box">
+        {% set _qr = qr_data is defined ? qr_data : (qrCodeDataUri is defined ? qrCodeDataUri : null) %}
+        {% if _qr %}
+            <img src="{{ _qr }}" alt="QR Code fiche consultation">
+        {% endif %}
+        <div style="font-size:12px; margin-top:4px;">QR Consultation</div>
+        {% if code_qr is defined and code_qr %}
+            <div style="font-size:11px; margin-top:6px;">Code : {{ code_qr }}</div>
+        {% endif %}
+        {% if verifyUrl is defined and verifyUrl %}
+            <div style="font-size:10px; margin-top:4px;">Vérifier : <a href="{{ verifyUrl }}">{{ verifyUrl }}</a></div>
+        {% endif %}
+    </div>
+</div>
+
+<div class="title">Fiche de consultation</div>
+
+<div class="meta">
+    <div><strong>N° fiche :</strong> {{ consultation.id }}</div>
+    <div><strong>N° consultation :</strong> {{ consultation.id }}</div>
+    <div><strong>Date :</strong> {{ consultation.createdAt ? consultation.createdAt|date('d/m/Y H:i') : '-' }}</div>
+    {# <div><strong>Service médical :</strong> {{ serviceMedical ?: '-' }}</div> #}
+</div>
+
+<div class="section">
+    <div class="section-title">Patient</div>
+    <div class="box">
+        <strong>Nom et prénom :</strong>
+        {{ patient ? ((patient.nom ?? '') ~ ' ' ~ (patient.prenom ?? ''))|trim : '-' }}<br>
+
+        <strong>Code patient :</strong>
+        {{ patient and patient.code is defined ? patient.code : '-' }}<br>
+
+        <strong>N° dossier médical :</strong>
+        {{ consultation.dossierMedical and consultation.dossierMedical.numeroDossier is defined
+            ? consultation.dossierMedical.numeroDossier
+            : '-' }}<br>
+
+        <strong>Téléphone :</strong>
+        {{ patient and patient.telephone is defined ? patient.telephone : '-' }}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Médecin</div>
+    <div class="box">
+        {{ consultation.medecin
+            ? ((consultation.medecin.nom ?? '') ~ ' ' ~ (consultation.medecin.prenom ?? ''))|trim
+            : '-' }}
+    </div>
+</div>
+
+<div class="section">
+    <div class="section-title">Prestations prescrites</div>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 5%;">#</th>
+                <th style="width: 55%;">Prestation</th>
+                <th style="width: 20%;">Catégorie</th>
+                <th style="width: 10%;">Quantité</th>
+                <th style="width: 10%;">Instructions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for p in consultation.prescriptionsPrestations %}
+            <tr>
+                <td>{{ loop.index }}</td>
+                <td>{{ p.tarifPrestation.libelle|default('-') }}</td>
+                <td>{{ p.tarifPrestation.categorie.value|default('-')|replace({'_':' '})|title }}</td>
+                <td>{{ p.quantite|default(1) }}</td>
+                <td>{{ p.instructions ?: '-' }}</td>
+            </tr>
+        {% else %}
+            <tr>
+                <td colspan="5">Aucune prestation prescrite</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<div class="section">
+    <div class="section-title">Observations médicales</div>
+    <div class="box">
+        <strong>Motif :</strong> {{ consultation.motifs ?: '-' }}<br><br>
+        <strong>Diagnostic :</strong> {{ consultation.diagnostic ?: '-' }}<br><br>
+        <strong>Conduite à tenir :</strong> {{ consultation.conduiteATenir ?: '-' }}
+    </div>
+</div>
+
+<div class="signature">
+    <div class="signature-block">
+        <div class="line">Signature du médecin</div>
+    </div>
+
+    <div class="signature-block">
+        <div class="line">Cachet du service</div>
+    </div>
+</div>
+
+<div class="footer-note">
+    À PRÉSENTER À LA CAISSE POUR RÈGLEMENT
+</div>
+
+<div class="print-actions">
+    <button onclick="window.print()">Imprimer</button>
+</div>
+
+</body>
+</html>

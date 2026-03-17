@@ -124,4 +124,27 @@ class PrescriptionPrestationRepository extends ServiceEntityRepository
             ->getQuery()
             ->getResult();
     }
+
+    public function findExamensLaboPayesParConsultation(int $consultationId): array
+    {
+        return $this->createQueryBuilder('pp')
+            ->leftJoin('pp.consultation', 'c')->addSelect('c')
+            ->leftJoin('c.rendezVous', 'r')->addSelect('r')
+            ->leftJoin('r.patient', 'p')->addSelect('p')
+            ->leftJoin('c.medecin', 'm')->addSelect('m')
+            ->leftJoin('pp.tarifPrestation', 'tp')->addSelect('tp')
+            ->andWhere('c.id = :consultationId')
+            ->andWhere('pp.statut IN (:statuts)')
+            ->andWhere('tp.serviceExecution = :service')
+            ->setParameter('consultationId', $consultationId)
+            ->setParameter('statuts', [
+                StatutPrescriptionPrestation::PAYE,
+                StatutPrescriptionPrestation::EN_COURS,
+                StatutPrescriptionPrestation::REALISE,
+            ])
+            ->setParameter('service', 'laboratoire')
+            ->orderBy('pp.id', 'ASC')
+            ->getQuery()
+            ->getResult();
+    }
 }

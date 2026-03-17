@@ -6,9 +6,17 @@ use App\Repository\LotRepository;
 use App\Repository\MedicamentRepository;
 use App\Repository\VenteRepository;
 use App\Service\PharmacyService;
+use App\Entity\Vente;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use setasign\Fpdi\Fpdi;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Endroid\QrCode\Encoding\Encoding;
 
 #[Route('/pharmacie')]
 final class PharmacieController extends AbstractController
@@ -81,6 +89,100 @@ final class PharmacieController extends AbstractController
             'chiffreAffairesToday' => $chiffreAffairesToday,
             'lowStockMedicaments' => $lowStockMedicaments,
             'nearExpirationLots' => $nearExpirationLots,
+        ]);
+    }
+
+    #[Route('/vente/{id}/print', name: 'app_pharmacie_vente_print', methods: ['GET'])]
+    public function printVente(Vente $vente): Response
+    {
+        $verifyUrl = $this->generateUrl('app_pharmacie_vente_print', ['id' => $vente->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode(
+            data: $verifyUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 200,
+            margin: 6
+        );
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'VTE-' . $vente->getId();
+
+        return $this->render('pharmacie/print_caisse.html.twig', [
+            'vente' => $vente,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+    }
+
+    #[Route('/vente/{id}/pdf', name: 'app_pharmacie_vente_pdf', methods: ['GET'])]
+    public function printVentePdf(Vente $vente): Response
+    {
+        $verifyUrl = $this->generateUrl('app_pharmacie_vente_print', ['id' => $vente->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode(
+            data: $verifyUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 200,
+            margin: 6
+        );
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'VTE-' . $vente->getId();
+
+        $html = $this->renderView('pharmacie/print_caisse.html.twig', [
+            'vente' => $vente,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        $extraPath = $this->getParameter('kernel.project_dir') . '/public/pdf/ANNEXE_CAISSE_VERSO.pdf';
+        if (file_exists($extraPath)) {
+            $temp = sys_get_temp_dir() . '/vente_' . $vente->getId() . '.pdf';
+            file_put_contents($temp, $pdfOutput);
+
+            $fpdi = new Fpdi();
+            $count1 = $fpdi->setSourceFile($temp);
+            for ($p = 1; $p <= $count1; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $count2 = $fpdi->setSourceFile($extraPath);
+            for ($p = 1; $p <= $count2; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $merged = $fpdi->Output('S');
+
+            return new Response($merged, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('inline; filename="vente-%d.pdf"', $vente->getId()),
+            ]);
+        }
+
+        return new Response($pdfOutput, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('inline; filename="vente-%d.pdf"', $vente->getId()),
         ]);
     }
 }

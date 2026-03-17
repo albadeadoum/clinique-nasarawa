@@ -84,7 +84,7 @@ class Facture
 
     public function getMontantTotal(): int
     {
-        return $this->montantTotal;
+        return $this->montantTotal ?? 0;
     }
 
     public function setMontantTotal(int $montantTotal): static
@@ -95,7 +95,7 @@ class Facture
 
     public function getMontantPaye(): int
     {
-        return $this->montantPaye;
+        return $this->montantPaye ?? 0;
     }
 
     public function setMontantPaye(int $montantPaye): static
@@ -106,7 +106,7 @@ class Facture
 
     public function getResteAPayer(): int
     {
-        return $this->resteAPayer;
+        return $this->resteAPayer ?? 0;
     }
 
     public function setResteAPayer(int $resteAPayer): static

@@ -167,6 +167,13 @@
                         <span>Hospitalisation</span>
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link menu-link {{ app.request.attributes.get('_route') == 'app_pharmacie_index' ? 'active' : '' }}"
+                       href="{{ path('app_pharmacie_index') }}">
+                        <i class="ri-hospital-line"></i>
+                        <span>Pharmacie</span>
+                    </a>
+                </li>
 
                 <li class="menu-title">
                     <span>AUTRES</span>

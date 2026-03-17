@@ -18,7 +18,15 @@ use Symfony\Component\Form\FormError;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use setasign\Fpdi\Fpdi;
 
 #[Route('/consultation')]
 final class ConsultationController extends AbstractController
@@ -458,5 +466,102 @@ public function editAdmin(
         'form' => $form->createView(),
     ]);
 }
+
+#[Route('/{id}/fiche', name: 'app_consultation_print_fiche', methods: ['GET'])]
+    public function printFiche(Consultation $consultation): Response
+    {
+        $verifyUrl = $this->generateUrl('app_consultation_print_fiche', ['id' => $consultation->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        $qrCode = new QrCode(
+            data: $verifyUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 240,
+            margin: 8
+        );
+
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'C-' . $consultation->getId();
+
+        return $this->render('consultation/print_fiche.html.twig', [
+            'consultation' => $consultation,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+    }
+
+    #[Route('/{id}/fiche/pdf', name: 'app_consultation_print_fiche_pdf', methods: ['GET'])]
+    public function printFichePdf(Consultation $consultation): Response
+    {
+        $verifyUrl = $this->generateUrl('app_consultation_print_fiche', ['id' => $consultation->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode(
+            data: $verifyUrl,
+            encoding: new Encoding('UTF-8'),
+            size: 240,
+            margin: 8
+        );
+
+        $png = (new PngWriter())->write($qrCode)->getString();
+        $dataUri = 'data:image/png;base64,' . base64_encode($png);
+
+        $code = 'C-' . $consultation->getId();
+
+        $html = $this->renderView('consultation/print_fiche.html.twig', [
+            'consultation' => $consultation,
+            'qr_data' => $dataUri,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        // optional: merge external PDF page if exists
+        $extraPath = $this->getParameter('kernel.project_dir') . '/public/pdf/ANNEXE_CONSULTATION_VERSO.pdf';
+        if (file_exists($extraPath)) {
+            // save temp
+            $temp = sys_get_temp_dir() . '/consultation_' . $consultation->getId() . '.pdf';
+            file_put_contents($temp, $pdfOutput);
+
+            $fpdi = new Fpdi();
+            $count1 = $fpdi->setSourceFile($temp);
+            for ($p = 1; $p <= $count1; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $count2 = $fpdi->setSourceFile($extraPath);
+            for ($p = 1; $p <= $count2; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $merged = $fpdi->Output('S');
+
+            return new Response($merged, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('inline; filename="consultation-%d.pdf"', $consultation->getId()),
+            ]);
+        }
+
+        return new Response($pdfOutput, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('inline; filename="consultation-%d.pdf"', $consultation->getId()),
+        ]);
+    }
 
 }

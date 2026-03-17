@@ -37,6 +37,9 @@ class PrescriptionPrestation
     #[ORM\Column(type: 'boolean', options: ['default' => true])]
     private bool $aFacturer = true;
 
+    #[ORM\OneToOne(mappedBy: 'prescriptionPrestation', targetEntity: ResultatLaboratoire::class, cascade: ['persist', 'remove'])]
+    private ?ResultatLaboratoire $resultatLaboratoire = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -126,5 +129,19 @@ class PrescriptionPrestation
     public function getCategorieLabel(): ?string
     {
         return $this->tarifPrestation?->getCategorie()?->value;
+    }
+    public function getResultatLaboratoire(): ?ResultatLaboratoire
+    {
+        return $this->resultatLaboratoire;
+    }
+
+    public function setResultatLaboratoire(?ResultatLaboratoire $resultatLaboratoire): static
+    {
+        if ($resultatLaboratoire !== null && $resultatLaboratoire->getPrescriptionPrestation() !== $this) {
+            $resultatLaboratoire->setPrescriptionPrestation($this);
+        }
+
+        $this->resultatLaboratoire = $resultatLaboratoire;
+        return $this;
     }
 }

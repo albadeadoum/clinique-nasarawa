@@ -2,13 +2,26 @@
 
 namespace App\Controller;
 
+use App\Entity\Consultation;
 use App\Entity\PrescriptionPrestation;
+use App\Entity\ResultatLaboratoire;
+use App\Entity\ResultatLaboratoireLigne;
 use App\Enum\StatutPrescriptionPrestation;
+use App\Form\ResultatLaboratoireType;
 use App\Repository\PrescriptionPrestationRepository;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelMedium;
 use Symfony\Component\Routing\Attribute\Route;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Dompdf\Dompdf;
+use Dompdf\Options;
+use setasign\Fpdi\Fpdi;
 
 #[Route('/laboratoire')]
 final class LaboratoireController extends AbstractController
@@ -81,5 +94,236 @@ final class LaboratoireController extends AbstractController
         if ($service !== 'laboratoire') {
             throw $this->createNotFoundException('Cette prestation ne relève pas du laboratoire.');
         }
+    }
+
+    #[Route('/bon/consultation/{id}', name: 'app_laboratoire_bon_show', methods: ['GET'])]
+    public function bonShow(
+        Consultation $consultation,
+        PrescriptionPrestationRepository $repository
+    ): Response {
+        $examens = $repository->findExamensLaboPayesParConsultation($consultation->getId());
+
+        if (count($examens) === 0) {
+            $this->addFlash('warning', 'Aucun examen laboratoire payé trouvé pour cette consultation.');
+            return $this->redirectToRoute('app_laboratoire_index');
+        }
+
+        return $this->render('laboratoire/bon_show.html.twig', [
+            'consultation' => $consultation,
+            'examens' => $examens,
+        ]);
+    }
+
+    #[Route('/bon/consultation/{id}/print', name: 'app_laboratoire_bon_print', methods: ['GET'])]
+    public function bonPrint(
+        Consultation $consultation,
+        PrescriptionPrestationRepository $repository
+    ): Response {
+        $examens = $repository->findExamensLaboPayesParConsultation($consultation->getId());
+
+        if (count($examens) === 0) {
+            throw $this->createNotFoundException('Aucun examen laboratoire imprimable pour cette consultation.');
+        }
+
+        return $this->render('laboratoire/bon_print.html.twig', [
+            'consultation' => $consultation,
+            'examens' => $examens,
+        ]);
+    }
+
+    #[Route('/prestation/{id}/resultat', name: 'app_laboratoire_resultat_edit', methods: ['GET', 'POST'])]
+public function saisirResultat(
+    Request $request,
+    PrescriptionPrestation $prestation,
+    EntityManagerInterface $em
+): Response {
+    $this->verifierDestinationLaboratoire($prestation);
+
+    $resultat = $prestation->getResultatLaboratoire();
+    if (!$resultat) {
+        $resultat = new ResultatLaboratoire();
+        $resultat->setPrescriptionPrestation($prestation);
+        $prestation->setResultatLaboratoire($resultat);
+
+        $ligne = new ResultatLaboratoireLigne();
+        $ligne->setDemande($prestation->getTarifPrestation()?->getLibelle() ?? 'Examen');
+        $ligne->setOrdre(1);
+        $resultat->addLigne($ligne);
+    }
+
+    $form = $this->createForm(ResultatLaboratoireType::class, $resultat, [
+        'action' => $this->generateUrl('app_laboratoire_resultat_edit', [
+            'id' => $prestation->getId(),
+        ]),
+        'method' => 'POST',
+    ]);
+
+    $form->handleRequest($request);
+
+    if ($request->isXmlHttpRequest()) {
+        if ($form->isSubmitted() && $form->isValid()) {
+            $resultat->setDateValidation(new \DateTimeImmutable());
+
+            $user = $this->getUser();
+            if ($user && method_exists($user, 'getNomComplet')) {
+                $resultat->setValidePar($user->getNomComplet());
+            } elseif ($user && method_exists($user, 'getUserIdentifier')) {
+                $resultat->setValidePar($user->getUserIdentifier());
+            }
+
+            if ($prestation->getStatut() !== StatutPrescriptionPrestation::REALISE) {
+                $prestation->setStatut(StatutPrescriptionPrestation::REALISE);
+            }
+
+            $em->persist($resultat);
+            $em->flush();
+
+            return $this->json([
+                'success' => true,
+                'message' => 'Résultat laboratoire enregistré avec succès.',
+            ]);
+        }
+
+        return $this->render('laboratoire/_resultat_form.html.twig', [
+            'form' => $form->createView(),
+            'prestation' => $prestation,
+            'resultat' => $resultat,
+        ]);
+    }
+
+    if ($form->isSubmitted() && $form->isValid()) {
+        $resultat->setDateValidation(new \DateTimeImmutable());
+
+        $user = $this->getUser();
+        if ($user && method_exists($user, 'getNomComplet')) {
+            $resultat->setValidePar($user->getNomComplet());
+        } elseif ($user && method_exists($user, 'getUserIdentifier')) {
+            $resultat->setValidePar($user->getUserIdentifier());
+        }
+
+        if ($prestation->getStatut() !== StatutPrescriptionPrestation::REALISE) {
+            $prestation->setStatut(StatutPrescriptionPrestation::REALISE);
+        }
+
+        $em->persist($resultat);
+        $em->flush();
+
+        return $this->redirectToRoute('app_laboratoire_show', [
+            'id' => $prestation->getId(),
+        ]);
+    }
+
+    return $this->render('laboratoire/resultat_form.html.twig', [
+        'prestation' => $prestation,
+        'form' => $form->createView(),
+        'resultat' => $resultat,
+    ]);
+}
+
+    #[Route('/prestation/{id}/resultat/print', name: 'app_laboratoire_resultat_print', methods: ['GET'])]
+    public function imprimerResultat(PrescriptionPrestation $prestation): Response
+    {
+        $this->verifierDestinationLaboratoire($prestation);
+
+        $resultat = $prestation->getResultatLaboratoire();
+        if (!$resultat) {
+            throw $this->createNotFoundException('Aucun résultat laboratoire disponible pour cette prestation.');
+        }
+
+        $verifyUrl = $this->generateUrl('app_laboratoire_resultat_print', ['id' => $prestation->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode($verifyUrl);
+        $qrCode->setSize(220);
+        $qrCode->setMargin(8);
+
+        $png2 = (new PngWriter())->write($qrCode)->getString();
+        $dataUri2 = 'data:image/png;base64,' . base64_encode($png2);
+
+        $code = 'R-' . $resultat->getId();
+
+        // also provide a PDF endpoint
+        return $this->render('laboratoire/resultat_print.html.twig', [
+            'prestation' => $prestation,
+            'resultat' => $resultat,
+            'qr_data' => $dataUri2,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+    }
+
+    #[Route('/prestation/{id}/resultat/pdf', name: 'app_laboratoire_resultat_pdf', methods: ['GET'])]
+    public function imprimerResultatPdf(PrescriptionPrestation $prestation): Response
+    {
+        $this->verifierDestinationLaboratoire($prestation);
+
+        $resultat = $prestation->getResultatLaboratoire();
+        if (!$resultat) {
+            throw $this->createNotFoundException('Aucun résultat laboratoire disponible pour cette prestation.');
+        }
+
+        $verifyUrl = $this->generateUrl('app_laboratoire_resultat_print', ['id' => $prestation->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+
+        $qrCode = new QrCode($verifyUrl);
+        $qrCode->setSize(220);
+        $qrCode->setMargin(8);
+
+        $png2 = (new PngWriter())->write($qrCode)->getString();
+        $dataUri2 = 'data:image/png;base64,' . base64_encode($png2);
+
+        $code = 'R-' . $resultat->getId();
+
+        $html = $this->renderView('laboratoire/resultat_print.html.twig', [
+            'prestation' => $prestation,
+            'resultat' => $resultat,
+            'qr_data' => $dataUri2,
+            'code_qr' => $code,
+            'verifyUrl' => $verifyUrl,
+        ]);
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $dompdf->loadHtml($html);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $pdfOutput = $dompdf->output();
+
+        $extraPath = $this->getParameter('kernel.project_dir') . '/public/pdf/ANNEXE_LABO_VERSO.pdf';
+        if (file_exists($extraPath)) {
+            $temp = sys_get_temp_dir() . '/resultat_' . $prestation->getId() . '.pdf';
+            file_put_contents($temp, $pdfOutput);
+
+            $fpdi = new Fpdi();
+            $count1 = $fpdi->setSourceFile($temp);
+            for ($p = 1; $p <= $count1; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $count2 = $fpdi->setSourceFile($extraPath);
+            for ($p = 1; $p <= $count2; $p++) {
+                $tpl = $fpdi->importPage($p);
+                $size = $fpdi->getTemplateSize($tpl);
+                $fpdi->AddPage($size['orientation'], [$size['width'], $size['height']]);
+                $fpdi->useTemplate($tpl);
+            }
+
+            $merged = $fpdi->Output('S');
+
+            return new Response($merged, 200, [
+                'Content-Type' => 'application/pdf',
+                'Content-Disposition' => sprintf('inline; filename="resultat_labo-%d.pdf"', $prestation->getId()),
+            ]);
+        }
+
+        return new Response($pdfOutput, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => sprintf('inline; filename="resultat_labo-%d.pdf"', $prestation->getId()),
+        ]);
     }
 }
