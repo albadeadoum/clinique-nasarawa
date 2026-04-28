@@ -125,6 +125,7 @@ final class LaboratoireController extends AbstractController
         if ($prestation->getStatut() === StatutPrescriptionPrestation::PAYE) {
             $prestation->setStatut(StatutPrescriptionPrestation::EN_COURS);
             $em->flush();
+            $this->addFlash('success', 'Examen reçu et pris en charge avec succès.');
         }
 
         return $this->redirectToRoute('app_laboratoire_show', [
@@ -161,6 +162,7 @@ final class LaboratoireController extends AbstractController
 
         $prestation->setStatut(StatutPrescriptionPrestation::REALISE);
         $em->flush();
+        $this->addFlash('success', 'Examen marqué comme réalisé.');
 
         return $this->redirectToRoute('app_laboratoire_show', [
             'id' => $prestation->getId(),
@@ -420,6 +422,7 @@ public function saisirResultat(
 
             $em->persist($resultat);
             $em->flush();
+            $this->addFlash('success', 'Résultat laboratoire enregistré avec succès.');
 
             return $this->json([
                 'success' => true,
@@ -440,6 +443,7 @@ public function saisirResultat(
 
         $em->persist($resultat);
         $em->flush();
+        $this->addFlash('success', 'Résultat laboratoire enregistré avec succès.');
 
         return $this->redirectToRoute('app_laboratoire_show', [
             'id' => $prestation->getId(),
