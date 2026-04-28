@@ -171,9 +171,7 @@ class FacturationService
         }
 
         // Ajouter la ligne timbre lors du premier paiement (perception)
-        if ($facture->getMontantPaye() === 0) {
-            $this->assurerLigneTimbre($facture);
-        }
+        // Note: Le timbre est maintenant géré automatiquement dans recalculerFacture
 
         $this->recalculerFacture($facture);
 
@@ -202,6 +200,9 @@ class FacturationService
         $patient = $facture->getConsultation()?->getDossierMedical()?->getPatient();
 
         $this->priseEnChargeService->recalculerFacture($facture, $patient);
+
+        // Assurer que le timbre est correct après recalcul
+        $this->assurerLigneTimbre($facture);
     }
 
     public function mettreAJourStatutPrestations(Facture $facture): void
