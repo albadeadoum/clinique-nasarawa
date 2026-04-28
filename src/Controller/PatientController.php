@@ -37,6 +37,7 @@ final class PatientController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $em->persist($patient);
             $em->flush();
+            $this->addFlash('success', 'Patient créé avec succès.');
 
             return $this->redirectToRoute('app_patient_index');
         }
@@ -82,6 +83,7 @@ final class PatientController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $entityManager->persist($patient);
             $entityManager->flush();
+            $this->addFlash('success', 'Patient créé avec succès.');
 
             return $this->redirectToRoute('app_patient_index', [], Response::HTTP_SEE_OTHER);
         }

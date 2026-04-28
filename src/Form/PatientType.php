@@ -32,8 +32,14 @@ class PatientType extends AbstractType
                     'placeholder' => 'Ex: ABDOULAYE',
                     'autocomplete' => 'family-name',
                 ],
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Le nom est obligatoire.',
+                    ]),
+                ],
                 'help' => 'Obligatoire.',
             ])
+            
             ->add('prenom', TextType::class, [
                 'label' => 'Prénom(s)',
                 'attr' => [
@@ -42,6 +48,11 @@ class PatientType extends AbstractType
                     'autocomplete' => 'given-name',
                 ],
                 'help' => 'Obligatoire.',
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Le prénom est obligatoire.',
+                    ]),
+                ],
             ])
             ->add('dateNaissance', DateType::class, [
                 'label' => 'Date de naissance',
@@ -81,6 +92,12 @@ class PatientType extends AbstractType
                 'attr' => [
                     'class' => 'form-select',
                 ],
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Le sexe est obligatoire.',
+                    ]),
+                ],
+
             ]) 
           
 
@@ -94,7 +111,11 @@ class PatientType extends AbstractType
                     'autocomplete' => 'tel',
                 ],
                 'help' => 'Obligatoire. Format conseillé : +227 XX XX XX XX',
-                
+                'constraints' => [
+                     new NotBlank([
+                        'message' => 'Le téléphone est obligatoire.',
+                    ]),
+                ],
             ])
             ->add('adresse', TextType::class, [
                 'label' => 'Adresse',
@@ -102,6 +123,11 @@ class PatientType extends AbstractType
                 'attr' => [
                     'class' => 'form-control',
                     'placeholder' => 'Quartier, rue, ville…',
+                ],
+                'constraints' => [
+                    new NotBlank([
+                        'message' => 'Le nom est obligatoire.',
+                    ]),
                 ],
             ])
 
