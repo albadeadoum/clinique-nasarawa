@@ -21,7 +21,7 @@ final class PatientController extends AbstractController
 {
 
     #[IsGranted(new Expression(
-    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER')"
+    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_INFIRMIER')"
 ))]
      #[Route(name: 'app_patient_index', methods: ['GET', 'POST'])]
     public function index(
@@ -71,7 +71,7 @@ final class PatientController extends AbstractController
     }
 
     #[IsGranted(new Expression(
-    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN')"
+    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_INFIRMIER')"
 ))]
     #[Route('/new', name: 'app_patient_new', methods: ['GET', 'POST'])]
     public function new(Request $request, EntityManagerInterface $entityManager): Response
@@ -95,7 +95,7 @@ final class PatientController extends AbstractController
     }
 
     #[IsGranted(new Expression(
-    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER')"
+    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_INFIRMIER')"
 ))]
     #[Route('/{id}', name: 'app_patient_show', methods: ['GET'])]
     public function show(Patient $patient): Response
@@ -106,7 +106,7 @@ final class PatientController extends AbstractController
     }
 
     #[IsGranted(new Expression(
-    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER')"
+    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_INFIRMIER')"
 ))]
     #[Route('/{id}/pdf', name: 'app_patient_pdf', methods: ['GET'])]
     public function printPdf(Patient $patient): Response
@@ -142,7 +142,7 @@ final class PatientController extends AbstractController
     }
 
     #[IsGranted(new Expression(
-    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN')"
+    "is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_INFIRMIER')"
 ))]
    #[Route('/{id}/edit', name: 'app_patient_edit', methods: ['GET', 'POST'])]
     public function edit(Request $request, Patient $patient, EntityManagerInterface $entityManager): Response

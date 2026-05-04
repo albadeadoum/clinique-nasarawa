@@ -103,6 +103,7 @@ class TarifPrestationFixtures extends Fixture
             ['libelle' => 'TSH', 'categorie' => CategorieTarif::EXAMEN_BIOLOGIQUE, 'prix' => 3500],
             ['libelle' => 'Urée', 'categorie' => CategorieTarif::EXAMEN_BIOLOGIQUE, 'prix' => 2000],
             ['libelle' => 'Vitesse de sédimentation (VS)', 'categorie' => CategorieTarif::EXAMEN_BIOLOGIQUE, 'prix' => 3000],
+            ['libelle' => 'Widal', 'categorie' => CategorieTarif::EXAMEN_BIOLOGIQUE, 'prix' => 3000],
 
             // ================= EXAMENS FONCTIONNELS =================
             ['libelle' => 'ECG + Interprétation', 'categorie' => CategorieTarif::EXAMEN_FONCTIONNEL, 'prix' => 10000],

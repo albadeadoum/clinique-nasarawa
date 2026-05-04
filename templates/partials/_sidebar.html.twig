@@ -111,7 +111,7 @@
                 </a>
             </li>
 
-            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER')  %}
+            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER')  %}
                 <li class="nav-item">
                     <a class="nav-link menu-link {{ app.request.attributes.get('_route') starts with 'app_patient_' ? 'active' : '' }}"
                        href="{{ path('app_patient_index') }}">
@@ -121,7 +121,7 @@
                 </li>
             {% endif %}
 
-            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER') %}
+            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') or is_granted('ROLE_INFIRMIER') %}
                 <li class="nav-item">
                     <a class="nav-link menu-link {{ app.request.attributes.get('_route') starts with 'app_consultation_' ? 'active' : '' }}"
                        href="{{ path('app_consultation_index') }}">
@@ -161,7 +161,7 @@
                 </li>
             {% endif %}
 
-            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_MEDECIN') %}
+            {% if is_granted('ROLE_ADMIN') or is_granted('ROLE_ACCUEIL') or is_granted('ROLE_PERCEPTION') or is_granted('ROLE_MEDECIN') %}
                 <li class="nav-item">
                     <a class="nav-link menu-link {{ app.request.attributes.get('_route') starts with 'app_rendez_vous_' ? 'active' : '' }}"
                        href="{{ path('app_rendez_vous_index') }}">
